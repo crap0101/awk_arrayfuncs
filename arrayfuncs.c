@@ -83,36 +83,44 @@ int dl_load(const gawk_api_t *api_p, void *id) {
 /* UTILITY FUNCTIONS */
 /*********************/
 
-static awk_valtype_t copy_element (awk_value_t arr_item, awk_value_t * dest ) {
+static int copy_element (awk_value_t arr_item, awk_value_t * dest ) {
   switch (arr_item.val_type) {
   case AWK_STRING:
     make_const_string(arr_item.str_value.str, arr_item.str_value.len, dest);
-    break;
+    return 1;
   case AWK_REGEX:
     make_const_regex(arr_item.str_value.str, arr_item.str_value.len, dest);
+    return 1;
   case AWK_STRNUM:
     make_const_user_input(arr_item.str_value.str, arr_item.str_value.len, dest);
     //make_const_string(arr_item.str_value.str, arr_item.str_value.len, dest);
+    return 1;
   case AWK_NUMBER:
     make_number(arr_item.num_value, dest);
-    break;
+    return 1;
   case AWK_ARRAY:
     /* later... */
-    break;
+    return 0;
 /* not in gawkapi.h (3.0) */
 #ifdef AWK_BOOL
   case AWK_BOOL:
     make_bool(arr_item.bool_value, dest);
-    break;
+    return 1;
 #endif
-  case AWK_UNDEFINED: case AWK_SCALAR: case AWK_VALUE_COOKIE:  //XXX+TODO: manage undefined (aka unassigned), scalar, cookie
-    eprint("Unsupported type: %d (undef || scalar || cookie)\n", arr_item.val_type);
+  case AWK_UNDEFINED:
+    dprint("Undefined: type <%d>\n", AWK_UNDEFINED);
+    make_null_string(dest);
+    return 1;
+  case AWK_SCALAR:  //XXX: should not happen
+    eprint("Unsupported type: %d (scalar)\n", arr_item.val_type);
     return 0;
-  default:
-    eprint("Whaaaaaat?\n");
+  case AWK_VALUE_COOKIE:  //XXX: should not happen
+    eprint("Unsupported type: %d (value_cookie)\n", arr_item.val_type);
+    return 0;
+  default:  //XXX: should not happen
+    eprint("Unknown value type: <%d>\n", arr_item.val_type);
     return 0;
   }
-  return arr_item.val_type;
 }
 
 struct subarrays * alloc_subarray_list(struct subarrays *list, size_t new_size, int init) {
@@ -194,14 +202,15 @@ static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct a
     dprint("list[%zu].flat_array->count = %zu items\n", idx, list[idx].flat_array->count);
     for (i = 0; i < list[idx].flat_array->count; i++)  {
       if (! (ret = copy_element(list[idx].flat_array->elements[i].value, & list[idx].value_val))) {
-	//dprint("@@@ skip element at index %zu @@@\n", i);continue;
-	eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].value_val.val_type);
-	goto out;
-      } else if (ret == AWK_ARRAY) {
-	/* is a subarray, save it and procede */
-	dprint("@@@ subarray at index %zu (at size %zu)@@@\n", i, size);
-	list[size].source_array = list[idx].flat_array->elements[i].value.array_cookie;
-	size += 1;
+	if (list[idx].flat_array->elements[i].value.val_type == AWK_ARRAY) {
+	  /* is a subarray, save it and procede */
+	  dprint("@@@ subarray at index %zu (at size %zu)@@@\n", i, size);
+	  list[size].source_array = list[idx].flat_array->elements[i].value.array_cookie;
+	  size += 1;
+	} else {
+	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].value_val.val_type);
+	  goto out;
+	}
       } else {
 	make_number(dest_idx, & index_val);
 	if (! set_array_element(dest_array, & index_val, & list[idx].value_val)) {
@@ -286,14 +295,16 @@ static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, stru
     dprint("list[%zu].flat_array->count = %zu items\n", idx, list[idx].flat_array->count);
     for (i = 0; i < list[idx].flat_array->count; i++)  {
       if (! (ret = copy_element(list[idx].flat_array->elements[i].value, & list[idx].value_val))) {
-	//dprint("@@@ skip element at index %zu @@@\n", i);continue;
-	eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].value_val.val_type);
-	goto out;
-      } else if (ret == AWK_ARRAY) {
-	/* is a subarray, save it for later but *also* set the index val */
-	dprint("@@@ subarray at index %zu (at size %zu)@@@\n", i, size);
-	list[size].source_array = list[idx].flat_array->elements[i].value.array_cookie;
-	size += 1;
+	if (list[idx].flat_array->elements[i].value.val_type == AWK_ARRAY) {
+	  /* is a subarray, save it for later but *also* set the index val */
+	  dprint("@@@ subarray at index %zu (at size %zu)@@@\n", i, size);
+	  list[size].source_array = list[idx].flat_array->elements[i].value.array_cookie;
+	  size += 1;
+	} else {
+	  //dprint("@@@ skip element at index %zu @@@\n", i);continue;
+	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].value_val.val_type);
+	  goto out;
+	}
       }
       make_number(dest_idx, & index_val);
       if (! copy_element(list[idx].flat_array->elements[i].index, & list[idx].index_val)) {
@@ -381,27 +392,29 @@ static awk_value_t * do_copy_array(int nargs, awk_value_t *result, struct awk_ex
 	goto out;
       }
       if (! (ret = copy_element(list[idx].flat_array->elements[i].value, & list[idx].value_val))) {
-	//dprint("@@@ skip element at index %zu @@@\n", i);continue;
-	eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].value_val.val_type);
-	goto out;
-      } else if (ret == AWK_ARRAY) {
-	/* is a subarray, save it and procede */
-	dprint("@@@ subarray at index %zu @@@\n", i);
-	list[size].dest_array = create_array();
-	list[size].dest_arr_value.val_type = AWK_ARRAY;
-	list[size].dest_arr_value.array_cookie = list[size].dest_array;
+	if (list[idx].flat_array->elements[i].value.val_type == AWK_ARRAY) {
+	  /* is a subarray, save it and procede */
+	  dprint("@@@ subarray at index %zu @@@\n", i);
+	  list[size].dest_array = create_array();
+	  list[size].dest_arr_value.val_type = AWK_ARRAY;
+	  list[size].dest_arr_value.array_cookie = list[size].dest_array;
 	
-	if (! set_array_element(list[idx].dest_array, & list[idx].index_val, & list[size].dest_arr_value)){
-	  eprint("set_array_element() failed on subarray at index %zu\n", idx);
-	  size -=1;
+	  if (! set_array_element(list[idx].dest_array, & list[idx].index_val, & list[size].dest_arr_value)) {
+	    eprint("set_array_element() failed on subarray at index %zu\n", idx);
+	    size -=1;
+	    goto out;
+	  }
+	  list[size].source_array = list[idx].flat_array->elements[i].value.array_cookie;
+	  list[size].dest_array = list[size].dest_arr_value.array_cookie; /*** MANDATORY -- after set_array_element ***/
+	  size += 1;
+	} else {
+	  //dprint("@@@ skip element at index %zu @@@\n", i);continue;
+	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].value_val.val_type);
 	  goto out;
 	}
-	list[size].source_array = list[idx].flat_array->elements[i].value.array_cookie;
-	list[size].dest_array = list[size].dest_arr_value.array_cookie; /*** MANDATORY -- after set_array_element ***/
-	size += 1;
       } else {
 	if (! set_array_element(list[idx].dest_array, & list[idx].index_val, & list[idx].value_val)) {
-	  eprint("set_array_element() failed on scalar value at index %zu\n", idx);
+	  eprint("set_array_element() failed on value at index %zu\n", idx);
 	  goto out;
 	}
       }
