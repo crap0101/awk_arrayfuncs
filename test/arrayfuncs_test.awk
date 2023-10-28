@@ -20,6 +20,7 @@
 ##########################
 
 function _make_arr_dep_rec(arr, level,    idx, i) {
+    # make $arr with $level levels of subarrays
     if (level < 1)
 	return
     if (arrlib::is_empty(arr))
@@ -31,16 +32,6 @@ function _make_arr_dep_rec(arr, level,    idx, i) {
 	    arr[idx][i] = i*level
 	_make_arr_dep_rec(arr[idx], level-1)
     }
-}
-
-function _total_idx(arr,    i, idx) {
-    i = 0
-    for (idx in arr)
-	if (awk::isarray(arr[idx]))
-	    i += 1 + _total_idx(arr[idx])
-	else
-	    i += 1
-    return i
 }
 
 
@@ -81,6 +72,27 @@ BEGIN {
     testing::assert_true(arrlib::equals(a, b), 1, "> arrlib::equals(a, b)")
     @dprint("* a:") && arrlib::array_print(a)
     @dprint("* b:") && arrlib::array_print(b)
+
+    # let's do something extreme :D
+    @dprint("* copy_array(a, ___b)")
+    copy_array(a, ___b)
+    @dprint("* ___b:") && arrlib::array_print(___b)
+    @dprint("* copy_array(___b, ___b)")
+    copy_array(___b, ___b)
+    @dprint("* ___b:") && arrlib::array_print(___b)
+    testing::assert_true(arrlib::equals(a, ___b), 1, "> arrlib::equals(a, ___b)")
+    delete ___b
+    # insane! and "works" on flat array only.
+    # used with an array with subarrays has the side effet of delete them.
+    @dprint("* copy_array(arr, ___b)")
+    copy_array(arr, ___b)
+    @dprint("* ___b:") && arrlib::array_print(___b)
+    @dprint("* copy_array(___b, ___b)")
+    copy_array(___b, ___b)
+    @dprint("* arr:") && arrlib::array_print(arr)
+    @dprint("* ___b:") && arrlib::array_print(___b)
+    testing::assert_false(arrlib::equals(arr, ___b), 1, "> arrlib::equals(arr, ___b)")
+    delete ___b
 
     # add some unassigned values
     @dprint("* set unassigned values to a")
@@ -207,9 +219,11 @@ BEGIN {
 
     # test wrong inputs
     testing::assert_false(copy_array(arr, 2), 1, "> (must fail) copy_array(arr, 2)")
-    testing::assert_true(arrlib::equals(arr, arr2), 1, "> arrlib::equals(arr, arr2)") # checking if not messed up
+    # checking if not messed up:
+    testing::assert_true(arrlib::equals(arr, arr2), 1, "> arrlib::equals(arr, arr2)")
     testing::assert_false(copy_array(2, arr), 1, "> (fail) copy_array(2, arr)")
-    testing::assert_true(arrlib::equals(arr, arr2), 1, "> arrlib::equals(arr, arr2)") # checking if not messed up
+    # checking if not messed up:
+    testing::assert_true(arrlib::equals(arr, arr2), 1, "> arrlib::equals(arr, arr2)")
     testing::assert_false(copy_array(arr, 2), 1, "> (fail) copy_array(1, 2)")
     #@dprint("> (fail) copy_array(arr) ->", ! copy_array(arr)) # fatal error
     #@dprint("> (fail) copy_array() ->", ! copy_array(arr)) # fatal error
@@ -248,8 +262,8 @@ BEGIN {
     @dprint("* delete c")
     delete c
     # note: deep_flat_array indexes from 0
-    c[0]=0;c[1]=1;c[2]=2;c[3]=3;c[4]=4;c[5]=5;c[6]=6;c[7]=7;c[8]=8;c[9]=9;c[10]=10;
-    c[11]=11;c[12]=12;c[13]=13;c[14]=14;c[15]=15;c[16]=16;c[17]=17;c[18]=18;c[19]=19
+    for (i=0; i<20; i++)
+	c[i] = i
 
     # test no deep
     @dprint("* c:") && arrlib::array_print(c)
@@ -259,18 +273,14 @@ BEGIN {
     testing::assert_equal(arrlib::array_deep_length(c), arrlib::array_length(already_flat), 1,
 			  "> arrlib::array_deep_length(c) == arrlib::array_deep_length(already_flat)")
     delete d
-    d[40]=40;d[41]=41;d[42]=42;d[43]=43;d[44]=44;d[45]=45;d[46]=46;d[47]=47;d[48]=48;d[49]=49
+    for (i=40; i<50; i++)
+	d[i] = i
     @dprint("* d:") && arrlib::array_print(d)
     @dprint("* deep_flat_array(d, already_flat)")
     deep_flat_array(d, already_flat)
-    #@dprint(sprintf("> arrlib::equals(d, already_flat) = %d", arrlib::equals(d, already_flat)))
-    if (1) {
-	@dprint("* deep_flat_array(d, already_flat)")
-	deep_flat_array(d, c)
-    } else {  # works as well
-	@dprint("* copy array d in array c changing indexes")
-	for (_i in d) c[_i-40] = d[_i]
-    }
+    # Do changing indexes to compare them:
+    @dprint("* deep_flat_array(d, already_flat)")
+    deep_flat_array(d, c)
     testing::assert_true(arrlib::equals(c, already_flat), 1, "> arrlib::equals(c, already_flat)")
     @dprint("* c:") && arrlib::array_print(c)
     @dprint("* already_flat:") && arrlib::array_print(already_flat)
@@ -321,13 +331,17 @@ BEGIN {
     @dprint("* arr:") && arrlib::array_print(arr)
     @dprint("* deep_flat_array_idx(arr, arri)")
     deep_flat_array_idx(arr, arri)
-    testing::assert_equal(_total_idx(arr), arrlib::array_length(arri), 1, "> _total_idx(arr) == arrlib::array_length(arri)")
+    delete idxarr
+    arrlib::get_idx(arr, idxarr)
+    testing::assert_equal(arrlib::array_length(idxarr), arrlib::array_length(arri),
+	1, "> idxarr (arrlib) == arrlib::array_length(arri)")
+    delete idxarr
     _t1 = awkpot::get_tempfile()
     arrlib::print_idx(arr, _t1)
     delete _t1arr
     delete _arri
     awkpot::read_file_arr(_t1, _t1arr)
-    # test get_idx also
+    # To compare with get_idx
     arrlib::get_idx(arr, _arri)
     
     # forces values to be type string, cuz read_file_arr (which use getline)
@@ -342,7 +356,9 @@ BEGIN {
     }
     delete _t1idx
 
-    # removes original indexes (ones gets from get_idx differs from the ones gets from _read_file_arr)
+    testing::assert_true(arrlib::equals(_arri, _t1arr), 1, "> equals (_arri, _t1arr)")
+    # removes original indexes (values in $arri are indexed differently)
+    @dprint("* asort: _arrii, arri, _t1arr")
     awk::asort(_arri)
     awk::asort(_t1arr)
     awk::asort(arri)
