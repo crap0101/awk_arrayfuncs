@@ -57,6 +57,7 @@ BEGIN {
 	} else
 	    arr[i] = i
 
+
     # start report
     testing::start_test_report()
 
