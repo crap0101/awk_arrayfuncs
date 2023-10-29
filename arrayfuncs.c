@@ -10,8 +10,7 @@
 #include "gawkapi.h"
 
 #define __module__ "arrayfuncs"
-#define eprint(fmt, ...) fprintf(stderr, __msg_prologue, __module__, __func__); \
-    fprintf(stderr, fmt, ##__VA_ARGS__);
+#define eprint(fmt, ...) fprintf(stderr, __msg_prologue fmt, __module__, __func__, ##__VA_ARGS__)
 #define _DEBUGLVL 0
 #if (_DEBUGLVL)
 #define dprint eprint
@@ -68,7 +67,7 @@ int dl_load(const gawk_api_t *api_p, void *id) {
   
   for (i=0; i < sizeof(func_table) / sizeof(awk_ext_func_t); i++) {
     if (! add_ext_func("awk", & func_table[i])) {
-      eprint("can't add extension function <%s>", func_table[0].name);
+      eprint("can't add extension function <%s>\n", func_table[0].name);
       errors++;
     }
   }
