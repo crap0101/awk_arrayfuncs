@@ -1,3 +1,5 @@
+...todo
+
 awk arrays utilities
 
-...todo
+@namespace "array"
