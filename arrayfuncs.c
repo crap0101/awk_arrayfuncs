@@ -66,7 +66,7 @@ int dl_load(const gawk_api_t *api_p, void *id) {
   }
   
   for (i=0; i < sizeof(func_table) / sizeof(awk_ext_func_t); i++) {
-    if (! add_ext_func("awk", & func_table[i])) {
+    if (! add_ext_func("array", & func_table[i])) {
       eprint("can't add extension function <%s>\n", func_table[0].name);
       errors++;
     }
