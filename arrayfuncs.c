@@ -89,7 +89,7 @@ static int copy_element (awk_value_t arr_item, awk_value_t * dest ) {
   /*
    * Copies $arr_item on $*dest using the make_* gawk's api functions.
    * Returns 1 if succedes, 0 otherwise.
-   * Works with AWK_(STRIN|REGEX|STRNUM|NUMBER) and, if available, AWK_BOOL.
+   * Works with AWK_(STRING|REGEX|STRNUM|NUMBER) and, if available, AWK_BOOL.
    * For others val_type (such AWK_ARRAYs, which are much more complex
    * to handle, always returns 0. Such cases must be checked before or after
    * the calling of this function.
@@ -133,7 +133,17 @@ static int copy_element (awk_value_t arr_item, awk_value_t * dest ) {
   }
 }
 
-struct subarrays * alloc_subarray_list(struct subarrays *list, size_t new_size, int init) {
+struct subarrays * alloc_subarray_list(struct subarrays *list, size_t new_size) {
+  /*
+   * Allocates (or reallocates) a $list of <struct subarrays> of size $new_size.
+   * Returns the pointer to the allocated memory, or NULL if fails.
+   */
+    dprint("(re)alloc new_size=%zu\n", new_size);
+    list = realloc(list, sizeof(struct subarrays) * new_size);
+    return list;
+}
+
+struct subarrays * _alloc_subarray_list(struct subarrays *list, size_t new_size, int init) {
   /*
    * Allocates (or reallocates) a $list of <struct subarrays> of size $new_size.
    * Returns the poitner to the allocated memory, or NULL if fails.
@@ -170,7 +180,7 @@ static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct a
     eprint("two args expected: source_array, dest_array\n");
     return result;
   }
-  struct subarrays *list;
+  struct subarrays *list = NULL;
   awk_value_t dest_arr_value;
   awk_value_t index_val;
   awk_array_t dest_array;
@@ -180,8 +190,8 @@ static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct a
   size_t maxsize = 10;
   awk_valtype_t ret;
 
-  if (NULL == (list = alloc_subarray_list(list, maxsize, 1))) {
-    eprint("Can't allocate array lists!\n");
+  if (NULL == (list = alloc_subarray_list(list, maxsize))) {
+    eprint("Can't allocate array lists: %s", strerror(errno));
     goto out;
   }
   
@@ -202,8 +212,8 @@ static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct a
     dprint("idx, size, maxsize = %zu %zu %zu\n", idx, size, maxsize);
     if (size >= maxsize-1) {
       maxsize *= 10;
-      if (NULL == (list = alloc_subarray_list(list, maxsize, 0))) {
-	eprint("Can't reallocate array lists!\n");
+      if (NULL == (list = alloc_subarray_list(list, maxsize))) {
+	eprint("Can't reallocate array lists: %s", strerror(errno));
 	goto out;
       }
     }
@@ -265,7 +275,7 @@ static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, stru
     eprint("two args expected: source_array, dest_array\n");
     return result;
   }
-  struct subarrays *list;
+  struct subarrays *list = NULL;
   awk_value_t dest_arr_value;
   awk_value_t index_val;
   awk_array_t dest_array;
@@ -275,8 +285,8 @@ static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, stru
   size_t maxsize = 10;
   awk_valtype_t ret;
 
-  if (NULL == (list = alloc_subarray_list(list, maxsize, 1))) {
-    eprint("Can't allocate array lists!\n");
+  if (NULL == (list = alloc_subarray_list(list, maxsize))) {
+    eprint("Can't allocate array lists: %s", strerror(errno));
     goto out;
   }
   
@@ -297,8 +307,8 @@ static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, stru
     dprint("idx, size, maxsize = %zu %zu %zu\n", idx, size, maxsize);
     if (size >= maxsize-1) {
       maxsize *= 10;
-      if (NULL == (list = alloc_subarray_list(list, maxsize, 0))) {
-	eprint("Can't reallocate array lists!\n");
+      if (NULL == (list = alloc_subarray_list(list, maxsize))) {
+	eprint("Can't reallocate array lists: %s", strerror(errno));
 	goto out;
       }
     }
@@ -362,13 +372,13 @@ static awk_value_t * do_copy_array(int nargs, awk_value_t *result, struct awk_ex
     return result;
   }
 
-  struct subarrays *list;
+  struct subarrays *list = NULL;
   size_t i, idx = 0;
   size_t size = 0;
   size_t maxsize = 10;
   awk_valtype_t ret;
   
-  if (NULL == (list = alloc_subarray_list(list, maxsize, 1))) {
+  if (NULL == (list = alloc_subarray_list(list, maxsize))) {
     eprint("Can't allocate array lists!\n");
     goto out;
   }
@@ -391,8 +401,8 @@ static awk_value_t * do_copy_array(int nargs, awk_value_t *result, struct awk_ex
     dprint("idx, size, maxsize = %zu %zu %zu\n", idx, size, maxsize);
     if (size >= maxsize-1) {
       maxsize *= 10;
-      if (NULL == (list = alloc_subarray_list(list, maxsize, 0))) {
-	eprint("Can't reallocate array lists!\n");
+      if (NULL == (list = alloc_subarray_list(list, maxsize))) {
+	eprint("Can't reallocate array lists: %s", strerror(errno));
 	goto out;
       }
     }
