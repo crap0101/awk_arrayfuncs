@@ -34,7 +34,7 @@ static awk_value_t * do_copy_array(int nargs, awk_value_t *result, struct awk_ex
 static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
 static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
 //XXX+TODO: add depth parameter to flat to the given depth only
-// write do_check_equals function
+// XXX+TODO: write do_check_equals function
 
 /* ----- boilerplate code ----- */
 int plugin_is_GPL_compatible;

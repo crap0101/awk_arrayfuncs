@@ -5,14 +5,9 @@
 # https://github.com/crap0101/laundry_basket/blob/master/testing.awk
 
 @load "arrayfuncs"
-
-#######################################################
-################## N O T E S ##########################
-#######################################################
-# required: see @include                              #
-# required: see @load                                 #
-# required (shell): mktemp (for awkpot::get_tempfile) #
-#######################################################
+# https://github.com/crap0101/awk_arrayfuncs
+@load "sysutils"
+# https://github.com/crap0101/awk_sysutils
 
 
 ##########################
@@ -294,7 +289,7 @@ BEGIN {
     @dprint("* flatten2:") && arrlib::array_print(flatten2)
     testing::assert_equal(arrlib::array_deep_length(arr2), arrlib::array_length(flatten2), 1,
 			  "> arrlib::array_deep_length(arr2) == arrlib::array_length(flatten2)")
-    _t1 = awkpot::get_tempfile()
+    _t1 = sys::mktemp("/tmp")
     @dprint("* _prev_order = set_sort_order(\"@ind_num_desc\")")
     _prev_order = awkpot::set_sort_order("@ind_num_desc")
     @dprint("* print_val(arr2, _t1)")
@@ -317,7 +312,9 @@ BEGIN {
     testing::assert_equal(arrlib::array_deep_length(big2), arrlib::array_length(bigflat2), 1,
 			  "> arrlib::array_deep_length(big2) == arrlib::array_length(bigflat2)")
     testing::assert_true(arrlib::equals(bigflat, bigflat2), 1, "> arrlib::equals(bigflat, bigflat2)")
-    _t1 = awkpot::get_tempfile()
+    sys::rm(_t1)
+    
+    _t1 = sys::mktemp("/tmp")
     arrlib::print_val(big_array, _t1)
     delete _t1arr
     awkpot::read_file_arr(_t1, _t1arr)
@@ -337,7 +334,9 @@ BEGIN {
     testing::assert_equal(arrlib::array_length(idxarr), arrlib::array_length(arri),
 	1, "> idxarr (arrlib) == arrlib::array_length(arri)")
     delete idxarr
-    _t1 = awkpot::get_tempfile()
+    sys::rm(_t1)
+    
+    _t1 = sys::mktemp("/tmp")
     arrlib::print_idx(arr, _t1)
     delete _t1arr
     delete _arri
@@ -356,6 +355,7 @@ BEGIN {
 			    _t1idx["val"],_t1idx["val_type"], _t1idx["newval"], _t1idx["newval"]))
     }
     delete _t1idx
+    sys::rm(_t1)
 
     testing::assert_true(arrlib::equals(_arri, _t1arr), 1, "> equals (_arri, _t1arr)")
     # removes original indexes (values in $arri are indexed differently)
