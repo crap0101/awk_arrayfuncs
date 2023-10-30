@@ -86,6 +86,14 @@ int dl_load(const gawk_api_t *api_p, void *id) {
 /*********************/
 
 static int copy_element (awk_value_t arr_item, awk_value_t * dest ) {
+  /*
+   * Copies $arr_item on $*dest using the make_* gawk's api functions.
+   * Returns 1 if succedes, 0 otherwise.
+   * Works with AWK_(STRIN|REGEX|STRNUM|NUMBER) and, if available, AWK_BOOL.
+   * For others val_type (such AWK_ARRAYs, which are much more complex
+   * to handle, always returns 0. Such cases must be checked before or after
+   * the calling of this function.
+   */
   switch (arr_item.val_type) {
   case AWK_STRING:
     make_const_string(arr_item.str_value.str, arr_item.str_value.len, dest);
@@ -126,6 +134,10 @@ static int copy_element (awk_value_t arr_item, awk_value_t * dest ) {
 }
 
 struct subarrays * alloc_subarray_list(struct subarrays *list, size_t new_size, int init) {
+  /*
+   * Allocates (or reallocates) a $list of <struct subarrays> of size $new_size.
+   * Returns the poitner to the allocated memory, or NULL if fails.
+   */
   if (init) {
     dprint("(malloc) size=%zu\n", new_size);
     if (NULL == (list = malloc(sizeof(struct subarrays) * new_size)))
@@ -146,7 +158,8 @@ struct subarrays * alloc_subarray_list(struct subarrays *list, size_t new_size, 
 /***********************/
 
 static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
-  /* Flattens the $nargs[0] array into the $nargs[1] array *without* deleting
+  /*
+   * Flattens the $nargs[0] array into the $nargs[1] array *without* deleting
    * elements already present in the latter.
    * Flattens possibly present subarrays.
    * The flattened array will be indexed with integer values starting from 0.
@@ -240,7 +253,8 @@ static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct a
 }
 
 static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
-  /* Flattens the $nargs[0] array indices into the $nargs[1] array *without* deleting
+  /*
+   * Flattens the $nargs[0] array indices into the $nargs[1] array *without* deleting
    * elements already present in the latter.
    * Flattens possibly present subarrays.
    * The flattened array will be indexed with integer values starting from 0.
@@ -337,7 +351,8 @@ static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, stru
 }
 
 static awk_value_t * do_copy_array(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
-  /* Copies the $nargs[0] array into the $nargs[1] array, *without* deleting
+  /* 
+   * Copies the $nargs[0] array into the $nargs[1] array, *without* deleting
    * elements already present in the latter.
    */
   assert(result != NULL);
@@ -488,58 +503,3 @@ make_malloced_string(message, strlen(message), & result);
   } 
 dest_array = dest_arr_value.array_cookie;  // MANDATORY
 */
-
-
-/*  BACKUP COPY */
-/* static awk_value_t * do_copy_array(int nargs, awk_value_t *result, struct awk_ext_func *finfo) { */
-/*   assert(result != NULL); */
-/*   make_number(0.0, result); */
-/*   if (nargs < 2) { */
-/*     eprint("copy_array: two args expected: source, dest\n"); */
-/*     return result; */
-/*   } */
-
-/*   awk_value_t source_arr_value, dest_arr_value; */
-/*   awk_array_t source_array, dest_array; */
-/*   awk_value_t index_val, value_val; */
-/*   awk_flat_array_t *flat_array; */
-
-/*   size_t i; */
-
-/*   /\* SOURCE ARRAY *\/ */
-/*   if (! get_argument(0, AWK_ARRAY, & source_arr_value)) { */
-/*     eprint("copy_array: can't retrieve source array\n"); */
-/*     return result; */
-/*   } */
-/*   source_array = source_arr_value.array_cookie; */
-/*   if (! flatten_array_typed(source_array, & flat_array, AWK_STRING, AWK_UNDEFINED)) { */
-/*     eprint("copy_array: could not flatten source array\n"); */
-/*     return result; */
-/*   } */
-
-/*   /\* DEST ARRAY *\/ */
-/*   if (! get_argument(1, AWK_ARRAY, & dest_arr_value))  { */
-/*     eprint("copy_array: can't retrieve dest array\n"); */
-/*     goto out; */
-/*   } */
-/*   dest_array = dest_arr_value.array_cookie; /\*** MANDATORY ***\/ */
-
-/*   for (i = 0; i < flat_array->count; i++)  { */
-/*     if (! copy_element(flat_array->elements[i].index, & index_val)) { */
-/*       goto out; */
-/*     } */
-/*     if (! copy_element(flat_array->elements[i].value, & value_val)) { */
-/*       goto out; */
-/*     } */
-/*     if (! set_array_element(dest_array, & index_val, & value_val)) { */
-/*       eprint("set_array_element() failed"); */
-/*     } */
-/*   } */
-/*   make_number(1.0, result); */
-/*  out: */
-/*   /\* must be called before exit *\/ */
-/*   if (! release_flattened_array(source_array, flat_array)) { */
-/*     eprint("copy_array: error in release_flattened_array()\n"); */
-/*     } */
-/*   return result; */
-/* } */
