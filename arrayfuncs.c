@@ -37,6 +37,7 @@ static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func
 //XXX+TODO: add depth parameter to flat to the given depth only
 // XXX+TODO: write do_check_equals function
 
+
 /* ----- boilerplate code ----- */
 int plugin_is_GPL_compatible;
 static const gawk_api_t *api;
@@ -86,12 +87,12 @@ int dl_load(const gawk_api_t *api_p, void *id) {
 /* UTILITY FUNCTIONS */
 /*********************/
 
-char * create_array_name(awk_array_t arr) {
+String create_array_name(awk_array_t arr) {
   /*
    * Returns a string (or NULL, if fail) to be used as the
    * symtab's $arr name.
    */
-  char *name;
+  String name;
   if (NULL == (name = malloc(sizeof(char) * 100))) {
     eprint("malloc failed: %s", strerror(errno));
     return NULL;
@@ -520,8 +521,7 @@ static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func
   awk_flat_array_t *flat;
   awk_valtype_t ret;
 
-  char * arrname;
-
+  String arrname;
   int uniq_on_vals;
   size_t i, idx = 0;
   size_t size = 0;

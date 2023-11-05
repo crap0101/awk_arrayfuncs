@@ -285,7 +285,7 @@ BEGIN {
     arr2[2][5] = 2
     @dprint("* arr2:") && arrlib::array_print(arr2)
     @dprint("* array::deep_flat_array(arr2, flatten2)")
-    array::deep_flat_array(arr2, flatten2) ############################
+    array::deep_flat_array(arr2, flatten2)
 
     @dprint("* flatten2:") && arrlib::array_print(flatten2)
     testing::assert_equal(arrlib::array_deep_length(arr2), arrlib::array_length(flatten2), 1,
@@ -326,7 +326,7 @@ BEGIN {
     testing::assert_equal(arrlib::sprintf_val(_t1arr), arrlib::sprintf_val(bigflat), 1,
 	"> (sprintf_val) _t1arr == bigflat")
 
-    # TEST array::array::deep_flat_array_idx
+    # TEST array::deep_flat_array_idx
     @dprint("* arr:") && arrlib::array_print(arr)
     @dprint("* array::deep_flat_array_idx(arr, arri)")
     array::deep_flat_array_idx(arr, arri)
@@ -375,10 +375,94 @@ BEGIN {
 			  1, "> (sprintf_val) _t1arr == arri")
     testing::assert_equal(arrlib::sprintf_val(_arri), arrlib::sprintf_val(arri),
 			  1, "> (sprintf_val) _arri == arri")
+
+    # TEST array::uniq
+    awkpot::set_sort_order(_prev_order)
+    @dprint("* _prev_order = set_sort_order(\"@ind_num_asc\")")
+    _prev_order = awkpot::set_sort_order("@ind_num_asc")
+
+    delete __arr
+    delete __dest_v
+    delete __dest_i
+    for (i=0;i<5;i++)
+        if (i % 2) {
+            for (ii=0;ii<5;ii++)
+                __arr[i][ii]=(ii+1)*10
+        } else {
+	    __arr[i] = i
+	}
+    @dprint("* __arr:") && arrlib::array_print(__arr)
+    @dprint("* uniq (val)")
+    array::uniq(__arr, __dest_v)
+    @dprint("* __dest_v (uniq):") && arrlib::array_print(__dest_v)
+    @dprint("* uniq (idx)")
+    array::uniq(__arr, __dest_i, "i")
+    @dprint("* __dest_i (uniq):") && arrlib::array_print(__dest_i)
+    testing::assert_equal(arrlib::sprintf_idx(__dest_v, ":"), "0:2:4:10:20:30:40:50", 1, "> uniq (val) test __dest_v (1)")
+    testing::assert_equal(arrlib::sprintf_idx(__dest_i, ":"), "0:1:2:3:4", 1, "> uniq (idx) test __dest_i (1)")
+
+    # already flat:
+    delete __dest
+    delete __dest_v
+    delete __dest_i
+    for (i=0;i<5;i++)
+	__arr1[i] = i
+    array::uniq(__arr1, __dest_v)
+    array::uniq(__arr1, __dest_i, "i")
+    # special case since indexes equals values
+    testing::assert_true(arrlib::equals(__dest_v, __dest_i), 1, "> equals uniq arrs __dest_v __dest_i")
+    for (i in __dest_v)
+	testing::assert_equal(typeof(__dest_v[i]), "unassigned", 1, sprintf("> uniq __dest_v type at index %d", i))
+    for (i in __dest_i)
+	testing::assert_equal(typeof(__dest_i[i]), "unassigned", 1, sprintf("> uniq __dest_i type at index %d", i))
+
+    # empty array:
+    delete __arr1
+    delete __dest_v
+    delete __dest_i
+    rv = array::uniq(__arr1, __dest_v)
+    ri = array::uniq(__arr1, __dest_i, "i")
+    testing::assert_equal(0, rv, 1, "uniq (val) retcode on deleted array")
+    testing::assert_equal(0, ri, 1, "uniq (idx) retcode on deleted array")
+    testing::assert_true(arrlib::equals(__dest_v, __dest_i), 1, "> equals uniq (empty) arrs __dest_v __dest_i")
+
+    # big array:
+    delete __dest
+    delete __dest_v
+    delete __dest_i
+    @dprint("* arrlib::uniq on __dest")
+    arrlib::uniq(big_array, __dest)
+    #arrlib::uniq(__arr, __dest)
+    @dprint("* array::uniq (val) on __dest_v")
+    array::uniq(big_array, __dest_v, "v")
+    #array::uniq(__arr, __dest_v, "v")
+    testing::assert_true(arrlib::equals(__dest, __dest_v), 1, "> equals __dest __dest_v")
+
+    delete __dest
+    delete __dest_v
+    delete __dest_i
+    @dprint("* arrlib::uniq_idx on __dest")
+    #arrlib::uniq_idx(__arr, __dest)
+    # flat big_array first for same-indexes order (only for arrlib::uniq/uniq_idx, array::uniq is smarter :D))
+    array::deep_flat_array_idx(big_array, big_flat)
+    arrlib::uniq(big_flat, __dest)
+    @dprint("* array::uniq (idx) on __dest_i")
+    array::uniq(big_array, __dest_i, "i")
+    #array::uniq(__arr, __dest_i, "i")
+
+    @dprint("* __arr:") && arrlib::array_print(__arr)
+    @dprint("* __dest:") && arrlib::array_print(__dest)
+    @dprint("* __dest_i (uniq):") && arrlib::array_print(__dest_i)
+
+    testing::assert_true(arrlib::equals(__dest, __dest_i), 1, "> equals __dest __dest_i")
+    #print "XXXXXXXXX", arrlib::sprintf_idx(big_array,":")
+    delete __dest
+    delete __dest_i
+
     @dprint("* set_sort_order(_prev_order)")
     awkpot::set_sort_order(_prev_order)
-    
 
+    # report...
     testing::end_test_report()
     testing::report()
 
