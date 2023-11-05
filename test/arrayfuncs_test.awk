@@ -1,8 +1,8 @@
 
 @include "arrlib.awk"
 # https://github.com/crap0101/awk_arrlib
-@include "testing.awk"
-# https://github.com/crap0101/laundry_basket/blob/master/testing.awk
+@include "awk_testing.awk"
+# https://github.com/crap0101/laundry_basket/blob/master/awk_testing.awk
 
 @load "arrayfuncs"
 # https://github.com/crap0101/awk_arrayfuncs
@@ -277,15 +277,16 @@ BEGIN {
     # Do changing indexes to compare them:
     @dprint("* array::deep_flat_array(d, already_flat)")
     array::deep_flat_array(d, c)
-    testing::assert_true(arrlib::equals(c, already_flat), 1, "> arrlib::equals(c, already_flat)")
+    testing::assert_true(arrlib::equals(c, already_flat), 1, "> arrlib::equals(c, already_flat) (2)")
     @dprint("* c:") && arrlib::array_print(c)
     @dprint("* already_flat:") && arrlib::array_print(already_flat)
-    
+
     # test really deep
     arr2[2][5] = 2
     @dprint("* arr2:") && arrlib::array_print(arr2)
     @dprint("* array::deep_flat_array(arr2, flatten2)")
-    array::deep_flat_array(arr2, flatten2)
+    array::deep_flat_array(arr2, flatten2) ############################
+
     @dprint("* flatten2:") && arrlib::array_print(flatten2)
     testing::assert_equal(arrlib::array_deep_length(arr2), arrlib::array_length(flatten2), 1,
 			  "> arrlib::array_deep_length(arr2) == arrlib::array_length(flatten2)")
