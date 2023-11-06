@@ -30,9 +30,10 @@ struct subarrays {
   awk_flat_array_t *flat_array;
 };
 
-static awk_value_t * do_copy_array(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
-static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
-static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
+static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
+static awk_value_t * do_copy(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
+static awk_value_t * do_deep_flat(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
+static awk_value_t * do_deep_flat_idx(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
 static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
 //XXX+TODO: add depth parameter to flat to the given depth only
 // XXX+TODO: write do_check_equals function
@@ -46,9 +47,10 @@ static awk_ext_id_t ext_id;
 static const char *ext_version = "0.1";
 
 static awk_ext_func_t func_table[] = {
-  { "copy_array", do_copy_array, 2, 2, awk_false, NULL },
-  { "deep_flat_array", do_deep_flat_array, 2, 2, awk_false, NULL },
-  { "deep_flat_array_idx", do_deep_flat_array_idx, 2, 2, awk_false, NULL },
+  { "equals", do_equals, 2, 2, awk_false, NULL },
+  { "copy", do_copy, 2, 2, awk_false, NULL },
+  { "deep_flat", do_deep_flat, 2, 2, awk_false, NULL },
+  { "deep_flat_idx", do_deep_flat_idx, 2, 2, awk_false, NULL },
   { "uniq", do_uniq, 2, 2, awk_false, NULL },
 };
 
@@ -160,7 +162,7 @@ struct subarrays * alloc_subarray_list(struct subarrays *list, size_t new_size) 
 }
 
 
-struct subarrays * _deep_flat_array(struct subarrays *list, awk_array_t *dest_array, size_t *idx, size_t *size, size_t *maxsize) {
+struct subarrays * _deep_flat(struct subarrays *list, awk_array_t *dest_array, size_t *idx, size_t *size, size_t *maxsize) {
   /*
    * Private function to flat arrays.
    * Given a $list of <struct subarrays *>, fills $dest_array with the array's values
@@ -213,7 +215,7 @@ struct subarrays * _deep_flat_array(struct subarrays *list, awk_array_t *dest_ar
 }
 
 
-struct subarrays * _deep_flat_array_idx(struct subarrays *list, awk_array_t *dest_array, size_t *idx, size_t *size, size_t *maxsize) {
+struct subarrays * _deep_flat_idx(struct subarrays *list, awk_array_t *dest_array, size_t *idx, size_t *size, size_t *maxsize) {
   /*
    * Private function to flat arrays.
    * Given a $list of <struct subarrays *>, fills $dest_array
@@ -275,7 +277,112 @@ struct subarrays * _deep_flat_array_idx(struct subarrays *list, awk_array_t *des
 /* EXTENSION FUNCTIONS */
 /***********************/
 
-static awk_value_t * do_copy_array(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
+////////////////////////// XXX + TODO: equals //////////////////
+static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
+  /* 
+   * Copies the $nargs[0] array into the $nargs[1] array, *without* deleting
+   * elements already present in the latter.
+   */
+  assert(result != NULL);
+  make_number(0.0, result);
+  if (nargs < 2) {
+    eprint("two args expected: source, dest\n");
+    return result;
+  }
+
+  struct subarrays *list = NULL;
+  size_t i, idx = 0;
+  size_t size = 0;
+  size_t maxsize = 10;
+  awk_valtype_t ret;
+  
+  if (NULL == (list = alloc_subarray_list(list, maxsize))) {
+    eprint("Can't allocate array lists!\n");
+    goto out;
+  }
+
+  /* SOURCE ARRAY */
+  if (! get_argument(0, AWK_ARRAY, & list[size].source_arr_value)) {
+    eprint("can't retrieve source array\n");
+    goto out;
+  }
+  /* DEST ARRAY */
+  if (! get_argument(1, AWK_ARRAY, & list[size].dest_arr_value))  {
+    eprint("can't retrieve dest array\n");
+    goto out;
+  }
+  list[size].dest_array = list[size].dest_arr_value.array_cookie;     /*** MANDATORY ***/
+  list[size].source_array = list[size].source_arr_value.array_cookie; /*** MANDATORY ***/
+  size += 1;
+  
+  do {
+    dprint("idx, size, maxsize = %zu %zu %zu\n", idx, size, maxsize);
+    if (size >= maxsize-1) {
+      maxsize *= 10;
+      if (NULL == (list = alloc_subarray_list(list, maxsize))) {
+	eprint("Can't reallocate array lists: %s", strerror(errno));
+	goto out;
+      }
+    }
+    /* flat the array */
+    if (! flatten_array_typed(list[idx].source_array,
+			      & list[idx].flat_array, AWK_STRING, AWK_UNDEFINED)) {
+      eprint("could not flatten source array\n");
+      goto out;
+    }
+
+    dprint("list[%zu].flat_array->count = %zu items\n", idx, list[idx].flat_array->count);
+    for (i = 0; i < list[idx].flat_array->count; i++)  {
+      if (! copy_element(list[idx].flat_array->elements[i].index, & list[idx].index_val)) {
+	eprint("copy_element() at array index %zu (arraylist index %zu)\n", i, idx);
+	goto out;
+      }
+      if (! (ret = copy_element(list[idx].flat_array->elements[i].value, & list[idx].value_val))) {
+	if (list[idx].flat_array->elements[i].value.val_type == AWK_ARRAY) {
+	  /* is a subarray, save it and procede */
+	  dprint("subarray at index %zu\n", i);
+	  list[size].dest_array = create_array();
+	  list[size].dest_arr_value.val_type = AWK_ARRAY;                   // *** MANDATORY ***
+	  list[size].dest_arr_value.array_cookie = list[size].dest_array;   // *** MANDATORY ***
+	
+	  if (! set_array_element(list[idx].dest_array, & list[idx].index_val, & list[size].dest_arr_value)) {
+	    eprint("set_array_element() failed on subarray at index %zu\n", idx);
+	    size -=1;
+	    goto out;
+	  }
+	  list[size].source_array = list[idx].flat_array->elements[i].value.array_cookie;
+	  list[size].dest_array = list[size].dest_arr_value.array_cookie; // *** MANDATORY -- after set_array_element() ***
+	  size += 1;
+	} else {
+	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].value_val.val_type);
+	  goto out;
+	}
+      } else {
+	if (! set_array_element(list[idx].dest_array, & list[idx].index_val, & list[idx].value_val)) {
+	  eprint("set_array_element() failed on value at index %zu\n", idx);
+	  goto out;
+	}
+      }
+    }
+    idx += 1;
+  } while (idx < size);
+  make_number(1.0, result);
+ out:
+  /* MANDATORY -- must be called before exit */
+  dprint("Release flattened array...\n");
+  for (i=0; i < idx; i++) {
+    dprint("i, idx, size, maxsize = %zu %zu %zu %zu\n", i, idx, size, maxsize);
+    if (! release_flattened_array(list[i].source_array, list[i].flat_array)) {
+      eprint("in release_flattened_array() at index %ld\n", i);
+    }
+  }
+  free(list);
+  return result;
+}
+
+//////////////////////////// ^^^^^^^^^^^^^^^^^^ ////////////////
+
+static awk_value_t * do_copy(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
   /* 
    * Copies the $nargs[0] array into the $nargs[1] array, *without* deleting
    * elements already present in the latter.
@@ -378,7 +485,7 @@ static awk_value_t * do_copy_array(int nargs, awk_value_t *result, struct awk_ex
 }
 
 
-static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
+static awk_value_t * do_deep_flat(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
   /*
    * Flattens the $nargs[0] array into the $nargs[1] array *without* deleting
    * elements already present in the latter.
@@ -418,8 +525,8 @@ static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct a
   list[size].source_array = list[size].source_arr_value.array_cookie;  // *** MANDATORY ***
   size += 1;
 
-  if (NULL == (list = _deep_flat_array(list, & dest_array, & idx, & size, & maxsize))) {
-    eprint("_deep_flat_array failed!\n");
+  if (NULL == (list = _deep_flat(list, & dest_array, & idx, & size, & maxsize))) {
+    eprint("_deep_flat failed!\n");
     goto out;
   }
   
@@ -438,7 +545,7 @@ static awk_value_t * do_deep_flat_array(int nargs, awk_value_t *result, struct a
 }
 
 
-static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
+static awk_value_t * do_deep_flat_idx(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
   /*
    * Flattens the $nargs[0] array indices into the $nargs[1] array *without* deleting
    * elements already present in the latter.
@@ -477,8 +584,8 @@ static awk_value_t * do_deep_flat_array_idx(int nargs, awk_value_t *result, stru
   list[size].source_array = list[size].source_arr_value.array_cookie;  /*** MANDATORY ***/
   size += 1;
   
-  if (NULL == (list = _deep_flat_array_idx(list, & dest_array, & idx, & size, & maxsize))) {
-    eprint("_deep_flat_array_idx failed!\n");
+  if (NULL == (list = _deep_flat_idx(list, & dest_array, & idx, & size, & maxsize))) {
+    eprint("_deep_flat_idx failed!\n");
     goto out;
   }
   
@@ -506,10 +613,14 @@ static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func
   assert(result != NULL);
   make_number(0.0, result);
   if (nargs < 2) {
-    eprint("two args expected: source_array, dest_array\n");
+    eprint("at least two args expected: source_array, dest_array\n");
     return result;
   }
-
+  if (nargs > 3) {
+      eprint("too many function arguments\n");
+      return result;
+  }
+  
   struct subarrays *list = NULL;
   awk_value_t what;
   awk_value_t dest_arr_value;
@@ -579,13 +690,13 @@ static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func
   flat_array = flat_arr_value.array_cookie;   // *** MANDATORY after sym_update() ***
      
   if (uniq_on_vals) {
-    if (NULL == (list = _deep_flat_array(list, & flat_array, & idx, & size, & maxsize))) {
-      eprint("_deep_flat_array failed!\n");
+    if (NULL == (list = _deep_flat(list, & flat_array, & idx, & size, & maxsize))) {
+      eprint("_deep_flat failed!\n");
       goto out;
     }
   } else {
-    if (NULL == (list = _deep_flat_array_idx(list, & flat_array, & idx, & size, & maxsize))) {
-      eprint("_deep_flat_array_idx failed!\n");
+    if (NULL == (list = _deep_flat_idx(list, & flat_array, & idx, & size, & maxsize))) {
+      eprint("_deep_flat_idx failed!\n");
       goto out;
     }
   }
