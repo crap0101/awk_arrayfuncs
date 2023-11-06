@@ -9,25 +9,29 @@
 
 #include "gawkapi.h"
 
-#include "awk_extensions.h"
-// https://github.com/crap0101/laundry_basket/blob/master/awk_extensions.h
-
-#if defined(__module__)
- #undef __module__
-#endif
+// define these before include awk_extensions.h
+#define _DEBUGLEVEL 0
 #define __module__ "arrayfuncs"
 #define _create_array_fmt "arrayfuncs_array__%s__%p"
 
+#include "awk_extensions.h"
+// https://github.com/crap0101/laundry_basket/blob/master/awk_extensions.h
+
+
 struct subarrays {
-  awk_value_t index_val;
-  awk_value_t value_val;
+  awk_value_t source_index_val;
+  awk_value_t source_value_val;
+  awk_value_t dest_index_val;
+  awk_value_t dest_value_val;
+  
   awk_value_t source_arr_value;
   awk_value_t dest_arr_value;
   
   awk_array_t source_array;
   awk_array_t dest_array;
 
-  awk_flat_array_t *flat_array;
+  awk_flat_array_t *source_flat_array;
+  awk_flat_array_t *dest_flat_array;
 };
 
 static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
@@ -36,7 +40,6 @@ static awk_value_t * do_deep_flat(int nargs, awk_value_t *result, struct awk_ext
 static awk_value_t * do_deep_flat_idx(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
 static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func *finfo);
 //XXX+TODO: add depth parameter to flat to the given depth only
-// XXX+TODO: write do_check_equals function
 
 
 /* ----- boilerplate code ----- */
@@ -89,7 +92,7 @@ int dl_load(const gawk_api_t *api_p, void *id) {
 /* UTILITY FUNCTIONS */
 /*********************/
 
-String create_array_name(awk_array_t arr) {
+String create_array_name(awk_array_t arr) { //XXX+TODO: clock() not (or... and) %p
   /*
    * Returns a string (or NULL, if fail) to be used as the
    * symtab's $arr name.
@@ -103,13 +106,54 @@ String create_array_name(awk_array_t arr) {
   return name;
 }
 
-static int copy_element(awk_value_t arr_item, awk_value_t * dest ) {
+int compare_element(awk_value_t item1, awk_value_t item2) {
+  /*
+   * Compares if $item1 equals $item2. 
+   * Returns 1 if succedes, 0 otherwise.
+   * Works with AWK_(STRING|REGEX|STRNUM|NUMBER|UNDEFINED) and, if available, AWK_BOOL.
+   * For others val_type (such AWK_ARRAY, which are much more complex
+   * to handle, always returns 0. Such cases must be checked before or after
+   * the calling of this function.
+   */
+  if (item1.val_type != item2.val_type)
+    return 0;
+  switch (item1.val_type) {
+  case AWK_STRING: case AWK_REGEX: case AWK_STRNUM:
+    return (item1.str_value.len == item2.str_value.len &&
+	    (! strcmp(item1.str_value.str, item2.str_value.str)));
+  case AWK_NUMBER:
+    return item1.num_type == item2.num_type && item1.num_value == item2.num_value;
+/* not in gawkapi.h (3.0) */
+#ifdef AWK_BOOL
+  case AWK_BOOL:
+    return item1.bool_value == item2.bool_value;
+#endif
+  case AWK_UNDEFINED:
+    // pretty simple
+    return 1;
+  case AWK_ARRAY:
+    eprint("Unsupported type: %s\n", _val_types[item1.val_type]);
+    return 0;
+  case AWK_SCALAR:       // should not happen
+    eprint("Unsupported type: %s\n", _val_types[item1.val_type]);
+    return 0;
+  case AWK_VALUE_COOKIE: // should not happen
+    eprint("Unsupported type: %s\n", _val_types[item1.val_type]);
+    return 0;
+  default:               // could happen
+    eprint("Unknown val_type: <%d>\n", item1.val_type);
+    return 0;
+  }
+  return 0; // just for silencing warning
+}
+
+int copy_element(awk_value_t arr_item, awk_value_t * dest ) {
   /*
    * Copies $arr_item on $*dest using the make_* gawk's api functions.
    * Returns 1 if succedes, 0 otherwise.
-   * Works with AWK_(STRING|REGEX|STRNUM|NUMBER) and, if available, AWK_BOOL.
-   * For others val_type (such AWK_ARRAYs, which are much more complex
-   * to handle, always returns 0. Such cases must be checked before or after
+   * Works with AWK_(STRING|REGEX|STRNUM|NUMBER|UNDEFINED) and, if available, AWK_BOOL.
+   * For others val_type (such AWK_ARRAY, which are much more complex
+   * to handle), always returns 0. Such cases must be checked before or after
    * the calling of this function.
    */
   switch (arr_item.val_type) {
@@ -121,14 +165,10 @@ static int copy_element(awk_value_t arr_item, awk_value_t * dest ) {
     return 1;
   case AWK_STRNUM:
     make_const_user_input(arr_item.str_value.str, arr_item.str_value.len, dest);
-    //make_const_string(arr_item.str_value.str, arr_item.str_value.len, dest);
     return 1;
   case AWK_NUMBER:
     make_number(arr_item.num_value, dest);
     return 1;
-  case AWK_ARRAY:
-    /* later... */
-    return 0;
 /* not in gawkapi.h (3.0) */
 #ifdef AWK_BOOL
   case AWK_BOOL:
@@ -139,14 +179,16 @@ static int copy_element(awk_value_t arr_item, awk_value_t * dest ) {
     dprint("Undefined: type <%d>\n", AWK_UNDEFINED);
     make_null_string(dest);
     return 1;
-  case AWK_SCALAR:  //XXX: should not happen
+  case AWK_ARRAY:        // we don't copy arrays here! o.O
+    return 0;
+  case AWK_SCALAR:       // should not happen
     eprint("Unsupported type: %d (scalar)\n", arr_item.val_type);
     return 0;
-  case AWK_VALUE_COOKIE:  //XXX: should not happen
+  case AWK_VALUE_COOKIE: // should not happen
     eprint("Unsupported type: %d (value_cookie)\n", arr_item.val_type);
     return 0;
-  default:  //XXX: should not happen
-    eprint("Unknown value type: <%d>\n", arr_item.val_type);
+  default:               // could happen
+    eprint("Unknown val_type: <%d>\n", arr_item.val_type);
     return 0;
   }
 }
@@ -183,26 +225,26 @@ struct subarrays * _deep_flat(struct subarrays *list, awk_array_t *dest_array, s
     }
     // flat the array
     if (! flatten_array_typed(list[*idx].source_array,
-			      & list[*idx].flat_array, AWK_STRING, AWK_UNDEFINED)) {
+			      & list[*idx].source_flat_array, AWK_STRING, AWK_UNDEFINED)) {
       eprint("could not flatten source array (idx = %zu)\n", *idx);
       return NULL;
     }
 
-    dprint("list[%zu].flat_array->count = %zu items\n", *idx, list[*idx].flat_array->count);
-    for (i = 0; i < list[*idx].flat_array->count; i++)  {
-      if (! (ret = copy_element(list[*idx].flat_array->elements[i].value, & list[*idx].value_val))) {
-	if (list[*idx].flat_array->elements[i].value.val_type == AWK_ARRAY) {
+    dprint("list[%zu].flat_array->count = %zu items\n", *idx, list[*idx].source_flat_array->count);
+    for (i = 0; i < list[*idx].source_flat_array->count; i++)  {
+      if (! (ret = copy_element(list[*idx].source_flat_array->elements[i].value, & list[*idx].dest_value_val))) {
+	if (list[*idx].source_flat_array->elements[i].value.val_type == AWK_ARRAY) {
 	  // is a subarray, save it and procede
 	  dprint("subarray at index %zu (at size %zu)\n", i, *size);
-	  list[*size].source_array = list[*idx].flat_array->elements[i].value.array_cookie;
+	  list[*size].source_array = list[*idx].source_flat_array->elements[i].value.array_cookie;
 	  *size += 1;
 	} else {
-	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[*idx].value_val.val_type);
+	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[*idx].dest_value_val.val_type);
 	  return NULL;
 	}
       } else {
-	make_number(dest_idx, & list[*idx].index_val);
-	if (! set_array_element(*dest_array, & list[*idx].index_val, & list[*idx].value_val)) {
+	make_number(dest_idx, & list[*idx].dest_index_val);
+	if (! set_array_element(*dest_array, & list[*idx].dest_index_val, & list[*idx].dest_value_val)) {
 	  eprint("set_array_element() failed on scalar value at list[%zu] (dest_idx = %zu)\n", *idx, dest_idx);
 	  return NULL;
 	}
@@ -238,30 +280,30 @@ struct subarrays * _deep_flat_idx(struct subarrays *list, awk_array_t *dest_arra
     }
     /* flat the array */
     if (! flatten_array_typed(list[*idx].source_array,
-			      & list[*idx].flat_array, AWK_STRING, AWK_UNDEFINED)) {
+			      & list[*idx].source_flat_array, AWK_STRING, AWK_UNDEFINED)) {
       eprint("could not flatten source array (idx = %zu)\n", *idx);
       return NULL;
     }
 
-    dprint("list[%zu].flat_array->count = %zu items\n", *idx, list[*idx].flat_array->count);
-    for (i = 0; i < list[*idx].flat_array->count; i++)  {
-      if (! (ret = copy_element(list[*idx].flat_array->elements[i].value, & list[*idx].value_val))) {
-	if (list[*idx].flat_array->elements[i].value.val_type == AWK_ARRAY) {
+    dprint("list[%zu].flat_array->count = %zu items\n", *idx, list[*idx].source_flat_array->count);
+    for (i = 0; i < list[*idx].source_flat_array->count; i++)  {
+      if (! (ret = copy_element(list[*idx].source_flat_array->elements[i].value, & list[*idx].dest_value_val))) {
+	if (list[*idx].source_flat_array->elements[i].value.val_type == AWK_ARRAY) {
 	  // is a subarray, save it for later but *also* set the index val
 	  dprint("subarray at index %zu (at size %zu)\n", i, *size);
-	  list[*size].source_array = list[*idx].flat_array->elements[i].value.array_cookie;
+	  list[*size].source_array = list[*idx].source_flat_array->elements[i].value.array_cookie;
 	  *size += 1;
 	} else {
-	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[*idx].value_val.val_type);
+	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[*idx].dest_value_val.val_type);
 	  return NULL;
 	}
       }
       make_number(dest_idx, & dest_idx_val);
-      if (! copy_element(list[*idx].flat_array->elements[i].index, & list[*idx].index_val)) {
+      if (! copy_element(list[*idx].source_flat_array->elements[i].index, & list[*idx].dest_index_val)) {
 	eprint("copy_element() at array index %zu (arraylist index %zu)\n", i, *idx);
 	return NULL;
       }
-      if (! set_array_element(*dest_array, & dest_idx_val, & list[*idx].index_val)) {
+      if (! set_array_element(*dest_array, & dest_idx_val, & list[*idx].dest_index_val)) {
 	eprint("set_array_element() failed at list[%zu] (dest_idx = %zu)\n", *idx, dest_idx);
 	return NULL;
       }
@@ -277,16 +319,15 @@ struct subarrays * _deep_flat_idx(struct subarrays *list, awk_array_t *dest_arra
 /* EXTENSION FUNCTIONS */
 /***********************/
 
-////////////////////////// XXX + TODO: equals //////////////////
 static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
   /* 
-   * Copies the $nargs[0] array into the $nargs[1] array, *without* deleting
-   * elements already present in the latter.
+   * Returns true if the array at $nargs[0] equals the array at $nargs[1], else false.
+   * NOTE: comparing deleted arrays always evaluate to false.
    */
   assert(result != NULL);
   make_number(0.0, result);
-  if (nargs < 2) {
-    eprint("two args expected: source, dest\n");
+  if (nargs != 2) {
+    eprint("two args expected: array_1, array_2\n");
     return result;
   }
 
@@ -294,7 +335,6 @@ static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_fu
   size_t i, idx = 0;
   size_t size = 0;
   size_t maxsize = 10;
-  awk_valtype_t ret;
   
   if (NULL == (list = alloc_subarray_list(list, maxsize))) {
     eprint("Can't allocate array lists!\n");
@@ -303,12 +343,12 @@ static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_fu
 
   /* SOURCE ARRAY */
   if (! get_argument(0, AWK_ARRAY, & list[size].source_arr_value)) {
-    eprint("can't retrieve source array\n");
+    eprint("can't retrieve array (1st arg)\n");
     goto out;
   }
   /* DEST ARRAY */
   if (! get_argument(1, AWK_ARRAY, & list[size].dest_arr_value))  {
-    eprint("can't retrieve dest array\n");
+    eprint("can't retrieve array (2nd args)\n");
     goto out;
   }
   list[size].dest_array = list[size].dest_arr_value.array_cookie;     /*** MANDATORY ***/
@@ -324,44 +364,46 @@ static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_fu
 	goto out;
       }
     }
-    /* flat the array */
+    /* flat the arrays */
     if (! flatten_array_typed(list[idx].source_array,
-			      & list[idx].flat_array, AWK_STRING, AWK_UNDEFINED)) {
-      eprint("could not flatten source array\n");
+			      & list[idx].source_flat_array, AWK_STRING, AWK_UNDEFINED)) {
+      eprint("could not flatten (1st) array\n");
+      goto out;
+    }
+    if (! flatten_array_typed(list[idx].dest_array,
+			      & list[idx].dest_flat_array, AWK_STRING, AWK_UNDEFINED)) {
+      eprint("could not flatten (2nd) array\n");
       goto out;
     }
 
-    dprint("list[%zu].flat_array->count = %zu items\n", idx, list[idx].flat_array->count);
-    for (i = 0; i < list[idx].flat_array->count; i++)  {
-      if (! copy_element(list[idx].flat_array->elements[i].index, & list[idx].index_val)) {
-	eprint("copy_element() at array index %zu (arraylist index %zu)\n", i, idx);
+    if (list[idx].source_flat_array->count != list[idx].dest_flat_array->count) {
+      dprint("mismatch count at index <%zu>", idx);
+      goto out;
+    }
+    
+    dprint("list[%zu].source_flat_array->count = %zu items\n", idx, list[idx].source_flat_array->count);
+    for (i = 0; i < list[idx].source_flat_array->count; i++)  {
+
+      if (list[idx].source_flat_array->elements[i].index.val_type
+	  != list[idx].dest_flat_array->elements[i].index.val_type) {
+	dprint("mismatch val_type (index) at index <%zu>", idx);
 	goto out;
       }
-      if (! (ret = copy_element(list[idx].flat_array->elements[i].value, & list[idx].value_val))) {
-	if (list[idx].flat_array->elements[i].value.val_type == AWK_ARRAY) {
-	  /* is a subarray, save it and procede */
-	  dprint("subarray at index %zu\n", i);
-	  list[size].dest_array = create_array();
-	  list[size].dest_arr_value.val_type = AWK_ARRAY;                   // *** MANDATORY ***
-	  list[size].dest_arr_value.array_cookie = list[size].dest_array;   // *** MANDATORY ***
-	
-	  if (! set_array_element(list[idx].dest_array, & list[idx].index_val, & list[size].dest_arr_value)) {
-	    eprint("set_array_element() failed on subarray at index %zu\n", idx);
-	    size -=1;
-	    goto out;
-	  }
-	  list[size].source_array = list[idx].flat_array->elements[i].value.array_cookie;
-	  list[size].dest_array = list[size].dest_arr_value.array_cookie; // *** MANDATORY -- after set_array_element() ***
-	  size += 1;
-	} else {
-	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].value_val.val_type);
-	  goto out;
-	}
+      if (list[idx].source_flat_array->elements[i].value.val_type
+	  != list[idx].dest_flat_array->elements[i].value.val_type) {
+	dprint("mismatch val_type (value) at index <%zu>", idx);
+	goto out;
+      }
+      if (list[idx].source_flat_array->elements[i].value.val_type == AWK_ARRAY) {
+	list[size].source_array = list[idx].source_flat_array->elements[i].value.array_cookie;
+	list[size].dest_array = list[idx].dest_flat_array->elements[i].value.array_cookie;
+	size += 1;
       } else {
-	if (! set_array_element(list[idx].dest_array, & list[idx].index_val, & list[idx].value_val)) {
-	  eprint("set_array_element() failed on value at index %zu\n", idx);
+	if (! (compare_element(list[idx].source_flat_array->elements[i].index,
+			       list[idx].dest_flat_array->elements[i].index)
+	       && compare_element(list[idx].source_flat_array->elements[i].value,
+				  list[idx].dest_flat_array->elements[i].value)))
 	  goto out;
-	}
       }
     }
     idx += 1;
@@ -372,15 +414,17 @@ static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_fu
   dprint("Release flattened array...\n");
   for (i=0; i < idx; i++) {
     dprint("i, idx, size, maxsize = %zu %zu %zu %zu\n", i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array, list[i].flat_array)) {
-      eprint("in release_flattened_array() at index %ld\n", i);
+    if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
+      eprint("in release_flattened_array() at index %ld [1st array]\n", i);
+    }
+    if (! release_flattened_array(list[i].dest_array, list[i].dest_flat_array)) {
+      eprint("in release_flattened_array() at index %ld [2nd array]\n", i);
     }
   }
   free(list);
   return result;
 }
 
-//////////////////////////// ^^^^^^^^^^^^^^^^^^ ////////////////
 
 static awk_value_t * do_copy(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
   /* 
@@ -430,39 +474,39 @@ static awk_value_t * do_copy(int nargs, awk_value_t *result, struct awk_ext_func
     }
     /* flat the array */
     if (! flatten_array_typed(list[idx].source_array,
-			      & list[idx].flat_array, AWK_STRING, AWK_UNDEFINED)) {
+			      & list[idx].source_flat_array, AWK_STRING, AWK_UNDEFINED)) {
       eprint("could not flatten source array\n");
       goto out;
     }
 
-    dprint("list[%zu].flat_array->count = %zu items\n", idx, list[idx].flat_array->count);
-    for (i = 0; i < list[idx].flat_array->count; i++)  {
-      if (! copy_element(list[idx].flat_array->elements[i].index, & list[idx].index_val)) {
+    dprint("list[%zu].flat_array->count = %zu items\n", idx, list[idx].source_flat_array->count);
+    for (i = 0; i < list[idx].source_flat_array->count; i++)  {
+      if (! copy_element(list[idx].source_flat_array->elements[i].index, & list[idx].dest_index_val)) {
 	eprint("copy_element() at array index %zu (arraylist index %zu)\n", i, idx);
 	goto out;
       }
-      if (! (ret = copy_element(list[idx].flat_array->elements[i].value, & list[idx].value_val))) {
-	if (list[idx].flat_array->elements[i].value.val_type == AWK_ARRAY) {
+      if (! (ret = copy_element(list[idx].source_flat_array->elements[i].value, & list[idx].dest_value_val))) {
+	if (list[idx].source_flat_array->elements[i].value.val_type == AWK_ARRAY) {
 	  /* is a subarray, save it and procede */
 	  dprint("subarray at index %zu\n", i);
 	  list[size].dest_array = create_array();
 	  list[size].dest_arr_value.val_type = AWK_ARRAY;                   // *** MANDATORY ***
 	  list[size].dest_arr_value.array_cookie = list[size].dest_array;   // *** MANDATORY ***
 	
-	  if (! set_array_element(list[idx].dest_array, & list[idx].index_val, & list[size].dest_arr_value)) {
+	  if (! set_array_element(list[idx].dest_array, & list[idx].dest_index_val, & list[size].dest_arr_value)) {
 	    eprint("set_array_element() failed on subarray at index %zu\n", idx);
 	    size -=1;
 	    goto out;
 	  }
-	  list[size].source_array = list[idx].flat_array->elements[i].value.array_cookie;
+	  list[size].source_array = list[idx].source_flat_array->elements[i].value.array_cookie;
 	  list[size].dest_array = list[size].dest_arr_value.array_cookie; // *** MANDATORY -- after set_array_element() ***
 	  size += 1;
 	} else {
-	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].value_val.val_type);
+	  eprint("Unknown element at index %zu (val_type=%d)\n", i, list[idx].dest_value_val.val_type);
 	  goto out;
 	}
       } else {
-	if (! set_array_element(list[idx].dest_array, & list[idx].index_val, & list[idx].value_val)) {
+	if (! set_array_element(list[idx].dest_array, & list[idx].dest_index_val, & list[idx].dest_value_val)) {
 	  eprint("set_array_element() failed on value at index %zu\n", idx);
 	  goto out;
 	}
@@ -476,7 +520,7 @@ static awk_value_t * do_copy(int nargs, awk_value_t *result, struct awk_ext_func
   dprint("Release flattened array...\n");
   for (i=0; i < idx; i++) {
     dprint("i, idx, size, maxsize = %zu %zu %zu %zu\n", i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array, list[i].flat_array)) {
+    if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
       eprint("in release_flattened_array() at index %ld\n", i);
     }
   }
@@ -536,7 +580,7 @@ static awk_value_t * do_deep_flat(int nargs, awk_value_t *result, struct awk_ext
   dprint("Release flattened array...\n");
   for (i=0; i < idx; i++) {
     dprint("i, idx, size, maxsize = %zu %zu %zu %zu\n", i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array, list[i].flat_array)) {
+    if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
       eprint("in release_flattened_array() at index %ld\n", i);
     }
   }
@@ -595,7 +639,7 @@ static awk_value_t * do_deep_flat_idx(int nargs, awk_value_t *result, struct awk
   dprint("Release flattened array...\n");
   for (i=0; i < idx; i++) {
     dprint("i, idx, size, maxsize = %zu %zu %zu %zu\n", i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array, list[i].flat_array)) {
+    if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
       eprint("in release_flattened_array() at index %ld\n", i);
     }
   }
@@ -720,15 +764,13 @@ static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func
     }
   }
 
-  /////////////////////////////
-  
   make_number(1, result);
  out:
   // must be called before exit
   dprint("Release flattened array...\n");
   for (i=0; i < idx; i++) {
     dprint("i, idx, size, maxsize = %zu %zu %zu %zu\n", i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array, list[i].flat_array)) {
+    if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
       eprint("release_flattened_array() at index %ld\n", i);
     }
   }

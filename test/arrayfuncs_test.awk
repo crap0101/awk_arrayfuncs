@@ -15,7 +15,7 @@
 ##########################
 
 function _make_arr_dep_rec(arr, level,    idx, i) {
-    # make $arr with $level levels of subarrays
+    # make $arr with $level levels of subarrays.
     if (level < 1)
 	return
     if (arrlib::is_empty(arr))
@@ -29,6 +29,30 @@ function _make_arr_dep_rec(arr, level,    idx, i) {
     }
 }
 
+function _make_flat_array(arr, len,    i) {
+    # make an array of $len elements.
+    delete arr
+    if (! len)
+	len = 10
+    for (i=0; i<len; i++)
+	arr[i] = i
+}
+
+function _make_subarr(arr, len,    i, j) {
+    # make an array of $len elements, some of them will be arrays.
+    delete arr
+    if (! len)
+	len = 10
+    for (i=0; i<len; i++)
+	if (i%2)
+	    for (j=0; j<len; j++)
+		arr[i][j] = len*(i+j)
+	else
+	    arr[i] = i*10
+}
+
+
+### MAIN ###
 
 BEGIN {
     if (awk::ARRAYFUNCS_DEBUG) {
@@ -467,6 +491,57 @@ BEGIN {
 
     @dprint("* set_sort_order(_prev_order)")
     awkpot::set_sort_order(_prev_order)
+
+    # TEST array::equals
+    # wrong args, wrong number of
+    __a[0]=0
+    #testing::assert_true(array::equals(), 1, "> equals (no args)")  # fatal
+    #testing::assert_true(array::equals(__a), 1, "> equals (1 arg)") # fatal
+    testing::assert_false(array::equals(__a, __a, __a), 1, "> equals (3 args)")
+    testing::assert_false(array::equals(__a, 1), 1, "> equals (wrong type)")
+    testing::assert_false(array::equals(2, 1), 1, "> equals (wrong type) (2)")
+
+    # empty, change and add elements
+    delete __a
+    testing::assert_false(array::equals(__a, __a), 1, "> equals __a __a (empty)")
+    _make_flat_array(__arr, 10)
+    testing::assert_true(array::equals(__arr, __arr), 1, "> equals __arr __arr (flat)")
+    array::copy(__arr, __bar)
+    testing::assert_true(array::equals(__arr, __bar), 1, "> equals __arr __bar (flat)")
+
+    delete __bar
+    _make_subarr(__arr, 10)
+    testing::assert_true(array::equals(__arr, __arr), 1, "> equals __arr __arr (deep)")
+    array::copy(__arr, __bar)
+    testing::assert_true(array::equals(__arr, __bar), 1, "> equals __arr __bar (deep)")
+
+    @dprint("* changing some values in __arr")
+    _v = __arr[2]
+    __arr[2] = -_v
+    testing::assert_false(array::equals(__arr, __bar), 1, "> ! equals __arr __bar (change values)")
+    __arr[2] = _v
+    testing::assert_true(array::equals(__arr, __bar), 1, "> equals __arr __bar (change values)")
+
+    @dprint("* changing some values in __arr (add)")
+    __arr[33]=9
+    testing::assert_false(array::equals(__arr, __bar), 1, "> ! equals __arr __bar (add values)")
+    __bar[33]=9
+    testing::assert_true(array::equals(__arr, __bar), 1, "> equals __arr __bar (add values)")
+    
+    @dprint("* changing some values in __arr (undefined)")
+    _a[0]
+    __arr[2] = _a[0]
+    testing::assert_false(array::equals(__arr, __bar), 1, "> ! equals __arr __bar (undefined)")
+    __arr[2] = _v
+    testing::assert_true(array::equals(__arr, __bar), 1, "> equals __arr __bar (undefined)")
+
+    # big
+    delete __dest
+    delete __dest2
+    array::uniq(big_array, __dest, "i")
+    array::copy(__dest, __dest2)
+    testing::assert_true(array::equals(big_array, big_array), 1, "> equals __dest2 __dest (deep)")
+    testing::assert_true(array::equals(__dest2, __dest), 1, "> equals __dest2 __dest (deep)")
 
     # report...
     testing::end_test_report()
