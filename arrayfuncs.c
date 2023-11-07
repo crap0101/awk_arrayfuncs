@@ -12,7 +12,8 @@
 // define these before include awk_extensions.h
 #define _DEBUGLEVEL 0
 #define __module__ "arrayfuncs"
-#define _create_array_fmt "arrayfuncs_array__%s__%p"
+// others define
+#define _array_prefix "arrayfuncs_array__"
 
 #include "awk_extensions.h"
 // https://github.com/crap0101/laundry_basket/blob/master/awk_extensions.h
@@ -91,20 +92,6 @@ int dl_load(const gawk_api_t *api_p, void *id) {
 /*********************/
 /* UTILITY FUNCTIONS */
 /*********************/
-
-String create_array_name(awk_array_t arr) { //XXX+TODO: clock() not (or... and) %p
-  /*
-   * Returns a string (or NULL, if fail) to be used as the
-   * symtab's $arr name.
-   */
-  String name;
-  if (NULL == (name = malloc(sizeof(char) * 100))) {
-    eprint("malloc failed: %s", strerror(errno));
-    return NULL;
-  }
-  snprintf(name, 100, _create_array_fmt, __func__, arr);
-  return name;
-}
 
 int compare_element(awk_value_t item1, awk_value_t item2) {
   /*
@@ -724,7 +711,7 @@ static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func
   flat_array = create_array();
   flat_arr_value.val_type = AWK_ARRAY;        // *** MANDATORY ***
   flat_arr_value.array_cookie = flat_array;   // *** MANDATORY ***
-  if (NULL == (arrname = create_array_name(flat_array))) {
+  if (NULL == (arrname = rand_name(_array_prefix))) {
     goto out;
   }
   if (! sym_update(arrname, & flat_arr_value)) {

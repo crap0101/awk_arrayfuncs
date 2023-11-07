@@ -427,6 +427,11 @@ BEGIN {
     @dprint("* __dest_v (uniq):") && arrlib::array_print(__dest_v)
     @dprint("* uniq (idx)")
     array::uniq(__arr, __dest_i, "i")
+    # take a look at the symtab fr the generated array's names:
+    for (i in SYMTAB)
+	if (match(i, "^arrayfuncs_array__"))
+	    @dprint(sprintf("* random array name: <%s>", i))
+
     @dprint("* __dest_i (uniq):") && arrlib::array_print(__dest_i)
     testing::assert_equal(arrlib::sprintf_idx(__dest_v, ":"), "0:2:4:10:20:30:40:50", 1, "> uniq (val) test __dest_v (1)")
     testing::assert_equal(arrlib::sprintf_idx(__dest_i, ":"), "0:1:2:3:4", 1, "> uniq (idx) test __dest_i (1)")
@@ -485,7 +490,6 @@ BEGIN {
     @dprint("* __dest_i (uniq):") && arrlib::array_print(__dest_i)
 
     testing::assert_true(arrlib::equals(__dest, __dest_i), 1, "> equals __dest __dest_i")
-    #print "XXXXXXXXX", arrlib::sprintf_idx(big_array,":")
     delete __dest
     delete __dest_i
 
