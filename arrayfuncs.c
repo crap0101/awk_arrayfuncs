@@ -58,7 +58,7 @@ static awk_ext_func_t func_table[] = {
   { "uniq", do_uniq, 2, 2, awk_false, NULL },
 };
 
-static awk_bool_t (*init_func)(void) = NULL;
+__attribute__((unused)) static awk_bool_t (*init_func)(void) = NULL;
 
 
 int dl_load(const gawk_api_t *api_p, void *id) {
@@ -306,7 +306,7 @@ struct subarrays * _deep_flat_idx(struct subarrays *list, awk_array_t *dest_arra
 /* EXTENSION FUNCTIONS */
 /***********************/
 
-static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
+static awk_value_t * do_equals(int nargs, awk_value_t *result, __attribute__((unused)) struct awk_ext_func *finfo) {
   /* 
    * Returns true if the array at $nargs[0] equals the array at $nargs[1], else false.
    * NOTE: comparing deleted arrays always evaluate to false.
@@ -413,7 +413,7 @@ static awk_value_t * do_equals(int nargs, awk_value_t *result, struct awk_ext_fu
 }
 
 
-static awk_value_t * do_copy(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
+static awk_value_t * do_copy(int nargs, awk_value_t *result, __attribute__((unused)) struct awk_ext_func *finfo) {
   /* 
    * Copies the $nargs[0] array into the $nargs[1] array, *without* deleting
    * elements already present in the latter.
@@ -516,7 +516,7 @@ static awk_value_t * do_copy(int nargs, awk_value_t *result, struct awk_ext_func
 }
 
 
-static awk_value_t * do_deep_flat(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
+static awk_value_t * do_deep_flat(int nargs, awk_value_t *result, __attribute__((unused)) struct awk_ext_func *finfo) {
   /*
    * Flattens the $nargs[0] array into the $nargs[1] array *without* deleting
    * elements already present in the latter.
@@ -576,7 +576,7 @@ static awk_value_t * do_deep_flat(int nargs, awk_value_t *result, struct awk_ext
 }
 
 
-static awk_value_t * do_deep_flat_idx(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
+static awk_value_t * do_deep_flat_idx(int nargs, awk_value_t *result, __attribute__((unused)) struct awk_ext_func *finfo) {
   /*
    * Flattens the $nargs[0] array indices into the $nargs[1] array *without* deleting
    * elements already present in the latter.
@@ -635,7 +635,7 @@ static awk_value_t * do_deep_flat_idx(int nargs, awk_value_t *result, struct awk
 }
 
 
-static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func *finfo) {
+static awk_value_t * do_uniq(int nargs, awk_value_t *result, __attribute__((unused)) struct awk_ext_func *finfo) {
   /*
    * Populate $nargs[1] with unique elements from $nargs[0] as indexes
    * (and unassigned values). $nargs[2] must be a string about the
