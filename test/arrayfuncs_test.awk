@@ -2,7 +2,7 @@
 @include "arrlib.awk"
 # https://github.com/crap0101/awk_arrlib
 @include "awk_testing.awk"
-# https://github.com/crap0101/laundry_basket/blob/master/awk_testing.awk
+# https://github.com/crap0101/awk_testing
 
 @load "arrayfuncs"
 # https://github.com/crap0101/awk_arrayfuncs
