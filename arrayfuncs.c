@@ -12,12 +12,12 @@
 // define these before include awk_extensions.h
 #define _DEBUGLEVEL 0
 #define __module__ "arrayfuncs"
-// others define
-#define _array_prefix "arrayfuncs_array__"
 
 #include "awk_extensions.h"
 // https://github.com/crap0101/laundry_basket/blob/master/awk_extensions.h
 
+// others define
+#define _array_prefix "arrayfuncs_array__"
 
 struct subarrays {
   awk_value_t source_index_val;
@@ -76,7 +76,7 @@ int dl_load(const gawk_api_t *api_p, void *id) {
   
   for (i=0; i < sizeof(func_table) / sizeof(awk_ext_func_t); i++) {
     if (! add_ext_func("array", & func_table[i])) {
-      eprint("can't add extension function <%s>\n", func_table[0].name);
+      eprint("can't add extension function <%s>\n", func_table[i].name);
       errors++;
     }
   }
@@ -745,7 +745,7 @@ static awk_value_t * do_uniq(int nargs, awk_value_t *result, __attribute__((unus
     } else {
       make_null_string(& arr_value);
       if (! set_array_element(dest_array, & arr_index, & arr_value)) {
-	eprint("set_array_element() failed on scalar value at index %zu] (%s)\n", i, _val_types[arr_index.val_type]);
+	eprint("set_array_element() failed on scalar value at index %zu (%s)\n", i, _val_types[arr_index.val_type]);
 	return NULL;
       }
     }

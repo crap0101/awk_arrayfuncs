@@ -1,7 +1,7 @@
 
-@include "arrlib.awk"
+@include "arrlib"
 # https://github.com/crap0101/awk_arrlib
-@include "awk_testing.awk"
+@include "testing"
 # https://github.com/crap0101/awk_testing
 
 @load "arrayfuncs"
@@ -85,32 +85,32 @@ BEGIN {
     a[0]=1; a[1]=2; a[3]=3; a["foo"]="foo"; a["bar"]=2.3
     c[10]=1;c["foobar"]=111
 
-    @dprint("* a:") && arrlib::array_print(a)
+    @dprint("* a:") && arrlib::printa(a)
     @dprint("* array::copy(a, b)")
     array::copy(a, b)
 
     testing::assert_true(arrlib::equals(a, b), 1, "> arrlib::equals(a, b)")
-    @dprint("* a:") && arrlib::array_print(a)
-    @dprint("* b:") && arrlib::array_print(b)
+    @dprint("* a:") && arrlib::printa(a)
+    @dprint("* b:") && arrlib::printa(b)
 
     # let's do something extreme :D
     @dprint("* array::copy(a, ___b)")
     array::copy(a, ___b)
-    @dprint("* ___b:") && arrlib::array_print(___b)
+    @dprint("* ___b:") && arrlib::printa(___b)
     @dprint("* array::copy(___b, ___b)")
     array::copy(___b, ___b)
-    @dprint("* ___b:") && arrlib::array_print(___b)
+    @dprint("* ___b:") && arrlib::printa(___b)
     testing::assert_true(arrlib::equals(a, ___b), 1, "> arrlib::equals(a, ___b)")
     delete ___b
     # insane! and "works" on flat array only.
     # used with an array with subarrays has the side effet of delete them.
     @dprint("* array::copy(arr, ___b)")
     array::copy(arr, ___b)
-    @dprint("* ___b:") && arrlib::array_print(___b)
+    @dprint("* ___b:") && arrlib::printa(___b)
     @dprint("* array::copy(___b, ___b)")
     array::copy(___b, ___b)
-    @dprint("* arr:") && arrlib::array_print(arr)
-    @dprint("* ___b:") && arrlib::array_print(___b)
+    @dprint("* arr:") && arrlib::printa(arr)
+    @dprint("* ___b:") && arrlib::printa(___b)
     testing::assert_false(arrlib::equals(arr, ___b), 1, "> arrlib::equals(arr, ___b)")
     delete ___b
 
@@ -121,14 +121,14 @@ BEGIN {
 
     @dprint("* array::copy(a, cc)")
     array::copy(a,cc)
-    @dprint("* a:") && arrlib::array_print(a)
-    @dprint("* cc:") && arrlib::array_print(cc)
+    @dprint("* a:") && arrlib::printa(a)
+    @dprint("* cc:") && arrlib::printa(cc)
     @dprint(sprintf("* a[\"baz\"] <%s> (type: %s) cc[\"baz\"] <%s> (type: %s) | (eq? %d)\n",
 		    a["baz"], typeof(a["baz"]), cc["baz"], typeof(cc["baz"]), a["baz"] == cc["baz"]))
     testing::assert_true(arrlib::equals(a, cc), 1, "> arrlib::equals(a, cc)")
 
-    @dprint("* arrlib::array_copy(a, ccc)")
-    arrlib::array_copy(a, ccc)
+    @dprint("* arrlib::copy(a, ccc)")
+    arrlib::copy(a, ccc)
     testing::assert_true(arrlib::equals(cc, ccc), 1, "> arrlib::equals(cc, ccc)")
 
     @dprint("* arrlib::remove_unassigned(cc)")
@@ -149,8 +149,8 @@ BEGIN {
     b["foo"]="foobar"
     testing::assert_false(arrlib::equals(a, b), 1, "> ! arrlib::equals(a, b)")
     testing::assert_false(arrlib::exists(a, "foobar"), 1, "> ! arrlib::exists(a, \"foobar\")")
-    @dprint("* b:") && arrlib::array_print(b)
-    @dprint("* a:") && arrlib::array_print(a)
+    @dprint("* b:") && arrlib::printa(b)
+    @dprint("* a:") && arrlib::printa(a)
     @dprint("* set a[\"foo\"]= 33")
     a["foo"]= 33
     testing::assert_false(arrlib::equals(a, b), 1, "> ! arrlib::equals(a, b)")
@@ -165,18 +165,18 @@ BEGIN {
     @dprint("* delete a[5]")
     delete a[5]
     testing::assert_true(arrlib::equals(a, b), 1, "> arrlib::equals(a, b)")
-    @dprint("* a:") && arrlib::array_print(a)
-    @dprint("* b:") && arrlib::array_print(b)
+    @dprint("* a:") && arrlib::printa(a)
+    @dprint("* b:") && arrlib::printa(b)
 
     @dprint("* array::copy(c, b)")
     array::copy(c, b)
     @dprint("* array::copy(a, c)")
     array::copy(a, c)
     testing::assert_true(arrlib::equals(b, c), 1, "> arrlib::equals(b, c)")
-    @dprint("* c:") && arrlib::array_print(c)
-    @dprint("* b:") && arrlib::array_print(b)
-    _blen = arrlib::array_deep_length(b)
-    @dprint(sprintf("* _blen = arrlib::array_deep_length(b) = %d", _blen))
+    @dprint("* c:") && arrlib::printa(c)
+    @dprint("* b:") && arrlib::printa(b)
+    _blen = arrlib::deep_length(b)
+    @dprint(sprintf("* _blen = arrlib::deep_length(b) = %d", _blen))
     testing::assert_true(isarray(b), 1, "> isarray(b)")
     testing::assert_equal(_blen, arrlib::array_length(b), 1, "> arrlib::array_length(b) == _blen")
     @dprint("* delete a")
@@ -190,15 +190,15 @@ BEGIN {
     # build an array from several arrays
     arr3[0]=0;arr3[1]=11;arr3[2]=22;arr3[3]=33;
     arr4["foo"]=1; arr4["bar"]=5
-    @dprint("* arr3:") && arrlib::array_print(arr3)
-    @dprint("* arr4:") && arrlib::array_print(arr4)
+    @dprint("* arr3:") && arrlib::printa(arr3)
+    @dprint("* arr4:") && arrlib::printa(arr4)
 
     @dprint("* array::copy(arr3, arr2)")
     array::copy(arr3, arr2)
     @dprint("* array::copy(arr4, arr2)")
     array::copy(arr4, arr2)
     
-    @dprint("* arr2:") && arrlib::array_print(arr2)
+    @dprint("* arr2:") && arrlib::printa(arr2)
     testing::assert_true(isarray(arr2), 1, "> isarray(arr2)")
     testing::assert_false(arrlib::equals(arr2, arr3), 1, "> ! arrlib::equals(arr2, arr3)")
     testing::assert_not_equal(arrlib::array_length(arr2), arrlib::array_length(arr3), 1, "> length arr2 != length arr3")
@@ -216,11 +216,11 @@ BEGIN {
     arr["foo"]["bar"] = "bar"
     arr["foo"]["baz"] = 111
     arr[22]["eggs"] = "spam"
-    @dprint("* arr:") &&  arrlib::array_print(arr)
+    @dprint("* arr:") &&  arrlib::printa(arr)
     @dprint("* array::copy(arr, arr2)")
     array::copy(arr, arr2)
     testing::assert_true(arrlib::equals(arr, arr2), 1, "> arrlib::equals(arr, arr2)")
-    @dprint("* arr2:") && arrlib::array_print(arr2)
+    @dprint("* arr2:") && arrlib::printa(arr2)
 
     @dprint("* delete arr[22]")
     delete arr[22]
@@ -231,8 +231,8 @@ BEGIN {
 
     @dprint("* reset arr[22]")
     arr[22]["eggs"] = "spam"
-    @dprint("* arr:") && arrlib::array_print(arr)
-    @dprint("* arr2:") && arrlib::array_print(arr2)
+    @dprint("* arr:") && arrlib::printa(arr)
+    @dprint("* arr2:") && arrlib::printa(arr2)
     testing::assert_true(arrlib::equals(arr, arr2), 1, "> arrlib::equals(arr, arr2)")
     testing::assert_false(arrlib::equals(arr3, arr2), 1, "> ! arrlib::equals(arr3, arr2)")
 
@@ -251,31 +251,31 @@ BEGIN {
     # test misc
     delete c
     c[0]=0;c[1]=1
-    @dprint("* c:") && arrlib::array_print(c)
+    @dprint("* c:") && arrlib::printa(c)
     @dprint("* array::copy(c, d)")
     array::copy(c,d)
     @dprint("* delete c")
     delete c
-    @dprint("* d:") && arrlib::array_print(d)
+    @dprint("* d:") && arrlib::printa(d)
     testing::assert_true(isarray(d), 1, "> isarray(d)")
-    _dlen = arrlib::array_deep_length(d)
-    @dprint(sprintf("* _dlen = arrlib::array_deep_length(d) = %d", _dlen))
+    _dlen = arrlib::deep_length(d)
+    @dprint(sprintf("* _dlen = arrlib::deep_length(d) = %d", _dlen))
     @dprint("* array::copy(d, e)")
     array::copy(d, e)
     testing::assert_false(array::copy(c, d), 1, "> (fail) array::copy(c, d)")
-    @dprint("* d:") && arrlib::array_print(d)
+    @dprint("* d:") && arrlib::printa(d)
     testing::assert_true(isarray(d), 1, "> isarray(d)")
-    testing::assert_equal(_dlen, arrlib::array_deep_length(d), 1, "> arrlib::array_deep_length(d) == _dlen")
+    testing::assert_equal(_dlen, arrlib::deep_length(d), 1, "> arrlib::deep_length(d) == _dlen")
     testing::assert_true(arrlib::equals(d, e), 1, "> arrlib::equals(d, e)")
-    @dprint("* e:") && arrlib::array_print(e)
+    @dprint("* e:") && arrlib::printa(e)
     
     # test big_array with subarrays
     _make_arr_dep_rec(big_array, 15)
-    _big_len = arrlib::array_deep_length(big_array)
-    @dprint(sprintf("* _big_len = arrlib::array_deep_length(big_array) = %d", _big_len))
+    _big_len = arrlib::deep_length(big_array)
+    @dprint(sprintf("* _big_len = arrlib::deep_length(big_array) = %d", _big_len))
     @dprint("* array::copy(big_array, big2)")
     array::copy(big_array, big2)
-    testing::assert_equal(_big_len, arrlib::array_deep_length(big2), 1, "> arrlib::array_deep_length(big2) == _big_len")
+    testing::assert_equal(_big_len, arrlib::deep_length(big2), 1, "> arrlib::deep_length(big2) == _big_len")
     testing::assert_true(arrlib::equals(big_array, big2), 1, "> arrlib::equals(big_array, big2)")
     
     # TEST array::deep_flat
@@ -286,34 +286,34 @@ BEGIN {
 	c[i] = i
 
     # test no deep
-    @dprint("* c:") && arrlib::array_print(c)
+    @dprint("* c:") && arrlib::printa(c)
     @dprint("* array::deep_flat(c, already_flat)")
     array::deep_flat(c, already_flat)
     testing::assert_true(arrlib::equals(c, already_flat), 1, "> arrlib::equals(c, already_flat)")
-    testing::assert_equal(arrlib::array_deep_length(c), arrlib::array_length(already_flat), 1,
-			  "> arrlib::array_deep_length(c) == arrlib::array_deep_length(already_flat)")
+    testing::assert_equal(arrlib::deep_length(c), arrlib::array_length(already_flat), 1,
+			  "> arrlib::deep_length(c) == arrlib::deep_length(already_flat)")
     delete d
     for (i=40; i<50; i++)
 	d[i] = i
-    @dprint("* d:") && arrlib::array_print(d)
+    @dprint("* d:") && arrlib::printa(d)
     @dprint("* array::deep_flat(d, already_flat)")
     array::deep_flat(d, already_flat)
     # Do changing indexes to compare them:
     @dprint("* array::deep_flat(d, already_flat)")
     array::deep_flat(d, c)
     testing::assert_true(arrlib::equals(c, already_flat), 1, "> arrlib::equals(c, already_flat) (2)")
-    @dprint("* c:") && arrlib::array_print(c)
-    @dprint("* already_flat:") && arrlib::array_print(already_flat)
+    @dprint("* c:") && arrlib::printa(c)
+    @dprint("* already_flat:") && arrlib::printa(already_flat)
 
     # test really deep
     arr2[2][5] = 2
-    @dprint("* arr2:") && arrlib::array_print(arr2)
+    @dprint("* arr2:") && arrlib::printa(arr2)
     @dprint("* array::deep_flat(arr2, flatten2)")
     array::deep_flat(arr2, flatten2)
 
-    @dprint("* flatten2:") && arrlib::array_print(flatten2)
-    testing::assert_equal(arrlib::array_deep_length(arr2), arrlib::array_length(flatten2), 1,
-			  "> arrlib::array_deep_length(arr2) == arrlib::array_length(flatten2)")
+    @dprint("* flatten2:") && arrlib::printa(flatten2)
+    testing::assert_equal(arrlib::deep_length(arr2), arrlib::array_length(flatten2), 1,
+			  "> arrlib::deep_length(arr2) == arrlib::array_length(flatten2)")
     _t1 = sys::mktemp("/tmp")
     @dprint("* _prev_order = set_sort_order(\"@ind_num_desc\")")
     _prev_order = awkpot::set_sort_order("@ind_num_desc")
@@ -334,8 +334,8 @@ BEGIN {
     array::deep_flat(big_array, bigflat)
     @dprint("* array::deep_flat(big2, bigflat2)")
     array::deep_flat(big2, bigflat2)
-    testing::assert_equal(arrlib::array_deep_length(big2), arrlib::array_length(bigflat2), 1,
-			  "> arrlib::array_deep_length(big2) == arrlib::array_length(bigflat2)")
+    testing::assert_equal(arrlib::deep_length(big2), arrlib::array_length(bigflat2), 1,
+			  "> arrlib::deep_length(big2) == arrlib::array_length(bigflat2)")
     testing::assert_true(arrlib::equals(bigflat, bigflat2), 1, "> arrlib::equals(bigflat, bigflat2)")
     sys::rm(_t1)
     
@@ -345,13 +345,13 @@ BEGIN {
     awkpot::read_file_arr(_t1, _t1arr)
     awk::asort(_t1arr)
     awk::asort(bigflat)
-    testing::assert_equal(arrlib::array_deep_length(_t1arr), arrlib::array_length(bigflat), 1,
-			  "> arrlib::array_deep_length(_t1arr) == arrlib::array_length(bigflat)")
+    testing::assert_equal(arrlib::deep_length(_t1arr), arrlib::array_length(bigflat), 1,
+			  "> arrlib::deep_length(_t1arr) == arrlib::array_length(bigflat)")
     testing::assert_equal(arrlib::sprintf_val(_t1arr), arrlib::sprintf_val(bigflat), 1,
 	"> (sprintf_val) _t1arr == bigflat")
 
     # TEST array::deep_flat_idx
-    @dprint("* arr:") && arrlib::array_print(arr)
+    @dprint("* arr:") && arrlib::printa(arr)
     @dprint("* array::deep_flat_idx(arr, arri)")
     array::deep_flat_idx(arr, arri)
     delete idxarr
@@ -391,9 +391,9 @@ BEGIN {
     testing::assert_true(arrlib::equals(_arri, arri), 1, "> equals (_arri, arri)")
     testing::assert_true(arrlib::equals(_arri, _t1arr), 1, "> equals (_arri, _t1arr)")
 
-    @dprint("* arri:") && arrlib::array_print(arri)
-    @dprint("* _arri:") && arrlib::array_print(_arri)
-    @dprint("* _t1arr:") && arrlib::array_print(_t1arr)
+    @dprint("* arri:") && arrlib::printa(arri)
+    @dprint("* _arri:") && arrlib::printa(_arri)
+    @dprint("* _t1arr:") && arrlib::printa(_t1arr)
 
     testing::assert_equal(arrlib::sprintf_val(_t1arr), arrlib::sprintf_val(arri),
 			  1, "> (sprintf_val) _t1arr == arri")
@@ -421,10 +421,10 @@ BEGIN {
     testing::assert_false(array::uniq(__arr, __dest_, 1), 1, "> uniq [wrong 3rd arg type]")
     testing::assert_false(array::uniq(__arr, __dest_, "i", 2), 1, "> uniq [wrong number of args]")
     
-    @dprint("* __arr:") && arrlib::array_print(__arr)
+    @dprint("* __arr:") && arrlib::printa(__arr)
     @dprint("* uniq (val)")
     array::uniq(__arr, __dest_v)
-    @dprint("* __dest_v (uniq):") && arrlib::array_print(__dest_v)
+    @dprint("* __dest_v (uniq):") && arrlib::printa(__dest_v)
     @dprint("* uniq (idx)")
     array::uniq(__arr, __dest_i, "i")
     # take a look at the symtab fr the generated array's names:
@@ -432,7 +432,7 @@ BEGIN {
 	if (match(i, "^arrayfuncs_array__"))
 	    @dprint(sprintf("* random array name: <%s>", i))
 
-    @dprint("* __dest_i (uniq):") && arrlib::array_print(__dest_i)
+    @dprint("* __dest_i (uniq):") && arrlib::printa(__dest_i)
     testing::assert_equal(arrlib::sprintf_idx(__dest_v, ":"), "0:2:4:10:20:30:40:50", 1, "> uniq (val) test __dest_v (1)")
     testing::assert_equal(arrlib::sprintf_idx(__dest_i, ":"), "0:1:2:3:4", 1, "> uniq (idx) test __dest_i (1)")
 
@@ -485,9 +485,9 @@ BEGIN {
     array::uniq(big_array, __dest_i, "i")
     #array::uniq(__arr, __dest_i, "i")
 
-    @dprint("* __arr:") && arrlib::array_print(__arr)
-    @dprint("* __dest:") && arrlib::array_print(__dest)
-    @dprint("* __dest_i (uniq):") && arrlib::array_print(__dest_i)
+    @dprint("* __arr:") && arrlib::printa(__arr)
+    @dprint("* __dest:") && arrlib::printa(__dest)
+    @dprint("* __dest_i (uniq):") && arrlib::printa(__dest_i)
 
     testing::assert_true(arrlib::equals(__dest, __dest_i), 1, "> equals __dest __dest_i")
     delete __dest
@@ -560,7 +560,7 @@ BEGIN {
     # foo_array(x, 3)
     # #print "arr[foo]=", SYMTAB["x"]["foo"] # provando direttamente x["foo"] fallisce sym_update() in arrcopy.c (!!!)
     # # probabilmente perchè parsando questo file .awk inserisce già nella symtab il simbolo...
-    # arrlib::array_print(x);
+    # arrlib::printa(x);
     # #for (i in new_array) printf("new_array[%s] = %s\n", i, new_array[i])
     # print "--------"
     # exit #######
