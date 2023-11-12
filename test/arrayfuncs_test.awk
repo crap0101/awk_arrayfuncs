@@ -317,17 +317,17 @@ BEGIN {
     _t1 = sys::mktemp("/tmp")
     @dprint("* _prev_order = set_sort_order(\"@ind_num_desc\")")
     _prev_order = awkpot::set_sort_order("@ind_num_desc")
-    @dprint("* print_val(arr2, _t1)")
-    arrlib::print_val(arr2, _t1)
+    @dprint("* print_vals(arr2, _t1)")
+    arrlib::print_vals(arr2, _t1)
  
     awkpot::read_file_arr(_t1, _t1arr)
     awk::asort(_t1arr)
     awk::asort(flatten2)
-    @dprint(sprintf("* arr2 (str)     |%s|", arrlib::sprintf_val(arr2,":")))
-    @dprint(sprintf("* flatten2 (str) |%s|", arrlib::sprintf_val(flatten2,":")))
-    @dprint(sprintf("* (sprintf) _t1arr: <%s> flatten2: <%s>", arrlib::sprintf_val(_t1arr), arrlib::sprintf_val(flatten2)))
-    testing::assert_equal(arrlib::sprintf_val(_t1arr), arrlib::sprintf_val(flatten2), 1,
-	"> (sprintf_val) _t1arr == flatten2")
+    @dprint(sprintf("* arr2 (str)     |%s|", arrlib::sprintf_vals(arr2,":")))
+    @dprint(sprintf("* flatten2 (str) |%s|", arrlib::sprintf_vals(flatten2,":")))
+    @dprint(sprintf("* (sprintf) _t1arr: <%s> flatten2: <%s>", arrlib::sprintf_vals(_t1arr), arrlib::sprintf_vals(flatten2)))
+    testing::assert_equal(arrlib::sprintf_vals(_t1arr), arrlib::sprintf_vals(flatten2), 1,
+	"> (sprintf_vals) _t1arr == flatten2")
     testing::assert_true(arrlib::equals(_t1arr, flatten2, 0, 0), 1, "> arrlib::equals(_t1arr, flatten2)")
 
     @dprint("* array::deep_flat(big_array, bigflat)")
@@ -340,34 +340,34 @@ BEGIN {
     sys::rm(_t1)
     
     _t1 = sys::mktemp("/tmp")
-    arrlib::print_val(big_array, _t1)
+    arrlib::print_vals(big_array, _t1)
     delete _t1arr
     awkpot::read_file_arr(_t1, _t1arr)
     awk::asort(_t1arr)
     awk::asort(bigflat)
     testing::assert_equal(arrlib::deep_length(_t1arr), arrlib::array_length(bigflat), 1,
 			  "> arrlib::deep_length(_t1arr) == arrlib::array_length(bigflat)")
-    testing::assert_equal(arrlib::sprintf_val(_t1arr), arrlib::sprintf_val(bigflat), 1,
-	"> (sprintf_val) _t1arr == bigflat")
+    testing::assert_equal(arrlib::sprintf_vals(_t1arr), arrlib::sprintf_vals(bigflat), 1,
+	"> (sprintf_vals) _t1arr == bigflat")
 
     # TEST array::deep_flat_idx
     @dprint("* arr:") && arrlib::printa(arr)
     @dprint("* array::deep_flat_idx(arr, arri)")
     array::deep_flat_idx(arr, arri)
     delete idxarr
-    arrlib::get_idx(arr, idxarr)
+    arrlib::get_idxs(arr, idxarr)
     testing::assert_equal(arrlib::array_length(idxarr), arrlib::array_length(arri),
 	1, "> idxarr (arrlib) == arrlib::array_length(arri)")
     delete idxarr
     sys::rm(_t1)
     
     _t1 = sys::mktemp("/tmp")
-    arrlib::print_idx(arr, _t1)
+    arrlib::print_idxs(arr, _t1)
     delete _t1arr
     delete _arri
     awkpot::read_file_arr(_t1, _t1arr)
-    # To compare with get_idx
-    arrlib::get_idx(arr, _arri)
+    # To compare with get_idxs
+    arrlib::get_idxs(arr, _arri)
     
     # forces values to be type string, cuz read_file_arr (which use getline)
     # may be marks some integers as strnum.
@@ -395,10 +395,10 @@ BEGIN {
     @dprint("* _arri:") && arrlib::printa(_arri)
     @dprint("* _t1arr:") && arrlib::printa(_t1arr)
 
-    testing::assert_equal(arrlib::sprintf_val(_t1arr), arrlib::sprintf_val(arri),
-			  1, "> (sprintf_val) _t1arr == arri")
-    testing::assert_equal(arrlib::sprintf_val(_arri), arrlib::sprintf_val(arri),
-			  1, "> (sprintf_val) _arri == arri")
+    testing::assert_equal(arrlib::sprintf_vals(_t1arr), arrlib::sprintf_vals(arri),
+			  1, "> (sprintf_vals) _t1arr == arri")
+    testing::assert_equal(arrlib::sprintf_vals(_arri), arrlib::sprintf_vals(arri),
+			  1, "> (sprintf_vals) _arri == arri")
 
     # TEST array::uniq
     awkpot::set_sort_order(_prev_order)
@@ -433,8 +433,8 @@ BEGIN {
 	    @dprint(sprintf("* random array name: <%s>", i))
 
     @dprint("* __dest_i (uniq):") && arrlib::printa(__dest_i)
-    testing::assert_equal(arrlib::sprintf_idx(__dest_v, ":"), "0:2:4:10:20:30:40:50", 1, "> uniq (val) test __dest_v (1)")
-    testing::assert_equal(arrlib::sprintf_idx(__dest_i, ":"), "0:1:2:3:4", 1, "> uniq (idx) test __dest_i (1)")
+    testing::assert_equal(arrlib::sprintf_idxs(__dest_v, ":"), "0:2:4:10:20:30:40:50", 1, "> uniq (val) test __dest_v (1)")
+    testing::assert_equal(arrlib::sprintf_idxs(__dest_i, ":"), "0:1:2:3:4", 1, "> uniq (idx) test __dest_i (1)")
 
     # already flat:
     delete __dest
