@@ -9,7 +9,6 @@
 @load "sysutils"
 # https://github.com/crap0101/awk_sysutils
 
-# XXX+TODO: check test for gawk 5.3.0
 
 ##########################
 # PRIVATE TEST FUNCTIONS #
@@ -185,8 +184,8 @@ BEGIN {
     array::copy(c, b)
     @dprint("* array::copy(a, c)")
     array::copy(a, c)
-    @dprint("*xxxxxxxxxx b:") && arrlib::printa(b)
-    @dprint("*xxxxxxxxxx c:") && arrlib::printa(c)
+    #@dprint("*zzzzzzzzzz b:") && arrlib::printa(b)
+    #@dprint("*zzzzzzzzzz c:") && arrlib::printa(c)
     testing::assert_true(arrlib::equals(b, c), 1, "> arrlib::equals(b, c)")
     @dprint("* c:") && arrlib::printa(c)
     @dprint("* b:") && arrlib::printa(b)
