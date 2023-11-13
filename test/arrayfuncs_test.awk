@@ -9,6 +9,7 @@
 @load "sysutils"
 # https://github.com/crap0101/awk_sysutils
 
+# XXX+TODO: check test for gawk 5.3.0
 
 ##########################
 # PRIVATE TEST FUNCTIONS #
@@ -135,9 +136,14 @@ BEGIN {
     arrlib::remove_unassigned(cc)
     testing::assert_false(arrlib::equals(cc, ccc), 1, "> ! arrlib::equals(cc, ccc)")
     testing::assert_false(arrlib::equals(a, cc), 1, "> ! arrlib::equals(a, cc)")
+
     @dprint("* arrlib::remove_unassigned(ccc)")
     arrlib::remove_unassigned(ccc)
-    testing::assert_true(arrlib::equals(cc, ccc), 1, "> arrlib::equals(cc, ccc)")
+
+    # XXX+NOTE: see note in function arrlib::remove_unassigned
+    # merely accessing unassigned/untyped values, give them a (string) values (in gawk 5.3.0)
+    if (awkpot::cmp_version(awkpot::get_version(), "5.3.0", "awkpot::lt"))
+	testing::assert_true(arrlib::equals(cc, ccc), 1, "> arrlib::equals(cc, ccc)")
 
     @dprint("* arrlib::remove_unassigned(a)")
     arrlib::remove_unassigned(a)
@@ -145,6 +151,10 @@ BEGIN {
     delete ccc
 
     # add and remove values
+    # reset foobar as in c array
+    a["foobar"]=111
+    delete b
+    arrlib::copy(a, b)
     @dprint("* set b[\"foo\"]=\"foobar\"")
     b["foo"]="foobar"
     testing::assert_false(arrlib::equals(a, b), 1, "> ! arrlib::equals(a, b)")
@@ -157,6 +167,8 @@ BEGIN {
     testing::assert_false(arrlib::exists(b, 33), 1, "> ! arrlib::exists(b, 33)")
     @dprint("* set b[\"foo\"]= 33")
     b["foo"] = 33
+    @dprint("* b:") && arrlib::printa(b)
+    @dprint("* a:") && arrlib::printa(a)
     testing::assert_true(arrlib::equals(a, b), 1, "> arrlib::equals(a, b)")
     @dprint("* set a[5]= 55")
     a[5]= 5
@@ -167,11 +179,14 @@ BEGIN {
     testing::assert_true(arrlib::equals(a, b), 1, "> arrlib::equals(a, b)")
     @dprint("* a:") && arrlib::printa(a)
     @dprint("* b:") && arrlib::printa(b)
+    @dprint("* c:") && arrlib::printa(c)
 
     @dprint("* array::copy(c, b)")
     array::copy(c, b)
     @dprint("* array::copy(a, c)")
     array::copy(a, c)
+    @dprint("*xxxxxxxxxx b:") && arrlib::printa(b)
+    @dprint("*xxxxxxxxxx c:") && arrlib::printa(c)
     testing::assert_true(arrlib::equals(b, c), 1, "> arrlib::equals(b, c)")
     @dprint("* c:") && arrlib::printa(c)
     @dprint("* b:") && arrlib::printa(b)
