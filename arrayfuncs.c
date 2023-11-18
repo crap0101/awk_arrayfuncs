@@ -775,8 +775,8 @@ static awk_value_t * do_uniq(int nargs, awk_value_t *result, __attribute__((unus
 
 ////////////////////////////////////////////////////////////////
 ////////////////
-/* COMPILE WITH:
-crap0101@orange:~/test$ gcc -fPIC -shared -DHAVE_CONFIG_H -c -O -g -I/usr/include -I~/local/include/awk -Wall -Wextra arrayfuncs.c && gcc -o arrayfuncs.so -shared arrayfuncs.o && cp arrayfuncs.so ~/local/lib/awk/
+/* COMPILE WITH (me, not necessary you):
+crap0101@orange:~/test$ gcc -fPIC -shared -DHAVE_CONFIG_H -c -O -g -I/usr/include -iquote ~/local/include/awk -Wall -Wextra arrayfuncs.c && gcc -o arrayfuncs.so -shared arrayfuncs.o && cp arrayfuncs.so ~/local/lib/awk/
 */
 
 /******* NOTES ***************************/
