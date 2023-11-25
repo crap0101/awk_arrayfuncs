@@ -139,9 +139,9 @@ BEGIN {
     @dprint("* arrlib::remove_unassigned(ccc)")
     arrlib::remove_unassigned(ccc)
 
-    # XXX+NOTE: see note in function arrlib::remove_unassigned
-    # merely accessing unassigned/untyped values, give them a (string) values (in gawk 5.3.0)
-    if (awkpot::cmp_version(awkpot::get_version(), "5.3.0", "awkpot::lt"))
+    # XXX+NOTE: see note in function arrlib::remove_unassigned #XXX printing issue, in fact... working on this.
+    # merely accessing unassigned/untyped values, give them a (string) values (at least from gawk 5.2.2)
+    if (awkpot::cmp_version(awkpot::get_version(), "5.2.2", "awkpot::le"))
 	testing::assert_true(arrlib::equals(cc, ccc), 1, "> arrlib::equals(cc, ccc)")
 
     @dprint("* arrlib::remove_unassigned(a)")
