@@ -131,21 +131,21 @@ BEGIN {
     arrlib::copy(a, ccc)
     testing::assert_true(arrlib::equals(cc, ccc), 1, "> arrlib::equals(cc, ccc)")
 
-    @dprint("* arrlib::remove_unassigned(cc)")
-    arrlib::remove_unassigned(cc)
+    @dprint("* arrlib::remove_unassigned_untyped(cc)")
+    arrlib::remove_unassigned_untyped(cc)
     testing::assert_false(arrlib::equals(cc, ccc), 1, "> ! arrlib::equals(cc, ccc)")
     testing::assert_false(arrlib::equals(a, cc), 1, "> ! arrlib::equals(a, cc)")
 
-    @dprint("* arrlib::remove_unassigned(ccc)")
-    arrlib::remove_unassigned(ccc)
+    @dprint("* arrlib::remove_unassigned_untyped(ccc)")
+    arrlib::remove_unassigned_untyped(ccc)
 
-    # XXX+NOTE: see note in function arrlib::remove_unassigned #XXX printing issue, in fact... working on this.
+    # XXX+NOTE: see note in function arrlib::remove_unassigned_untyped #XXX printing issue, in fact... working on this.
     # merely accessing unassigned/untyped values, give them a (string) values (at least from gawk 5.2.2)
     if (awkpot::cmp_version(awkpot::get_version(), "5.2.2", "awkpot::lt"))
 	testing::assert_true(arrlib::equals(cc, ccc), 1, "> arrlib::equals(cc, ccc)")
 
-    @dprint("* arrlib::remove_unassigned(a)")
-    arrlib::remove_unassigned(a)
+    @dprint("* arrlib::remove_unassigned_untyped(a)")
+    arrlib::remove_unassigned_untyped(a)
     delete cc
     delete ccc
 
