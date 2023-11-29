@@ -365,6 +365,7 @@ do_equals(int nargs,
   /* 
    * Returns true if the array at $nargs[0]
    * equals the array at $nargs[1], else false.
+   * Exits with a fatal error if there are big issues.
    * NOTE: comparing deleted arrays always evaluate to false.
    */
   assert(result != NULL);
@@ -439,8 +440,10 @@ do_equals(int nargs,
 	if (! (compare_element(list[idx].source_flat_array->elements[i].index,
 			       list[idx].dest_flat_array->elements[i].index)
 	       && compare_element(list[idx].source_flat_array->elements[i].value,
-				  list[idx].dest_flat_array->elements[i].value)))
+				  list[idx].dest_flat_array->elements[i].value))) {
+	  dprint("compare_element returns false at index <%zu>", idx);
 	  goto out;
+	}
       }
     }
     idx += 1;
@@ -473,6 +476,9 @@ do_copy(int nargs,
   /* 
    * Copies the $nargs[0] array into the $nargs[1] array, *without* deleting
    * elements already present in the latter (sure they can be overwted).
+   * Exits with a fatal error if there are big issues, returns false if
+   * everything is not exactly ok but overall there are no errors respecting
+   * the requested operations, true if everything is fine.
    */
   assert(result != NULL);
   make_number(0.0, result);
@@ -486,7 +492,7 @@ do_copy(int nargs,
   if (nargs < 2)
     fatal(ext_id, "two args expected: source, dest\n");
   if (NULL == (list = alloc_subarray_list(list, maxsize)))
-    fatal(ext_id, "Can't allocate array lists!\n");
+    fatal(ext_id, "Can't allocate arrays list!\n");
 
   /* SOURCE ARRAY */
   if (! get_argument(0, AWK_ARRAY, & list[size].source_arr_value))
@@ -495,9 +501,14 @@ do_copy(int nargs,
   /* DEST ARRAY */
   if (! get_argument(1, AWK_ARRAY, & list[size].dest_arr_value))
     fatal(ext_id, "can't retrieve dest array\n");
+    
+  //XXX+TODO: test if works... not found a better way... seems no api facilities...
+  if (list[size].source_arr_value.array_cookie == list[size].dest_arr_value.array_cookie)
+    fatal(ext_id, "trying to copy an array on itself!");
 
   list[size].dest_array = list[size].dest_arr_value.array_cookie;     /*** MANDATORY ***/
   list[size].source_array = list[size].source_arr_value.array_cookie; /*** MANDATORY ***/
+
   size += 1;
   
   do {
@@ -574,7 +585,8 @@ do_copy(int nargs,
 	   i, idx, size, maxsize);
     if (! release_flattened_array(list[i].source_array,
 				  list[i].source_flat_array)) {
-      eprint("in release_flattened_array() at index <%ld>\n", i);
+      eprint("release_flattened_array() failed at index <%ld>\n", i);
+      make_number(0.0, result);
     }
   }
   free(list);
@@ -592,6 +604,9 @@ do_deep_flat(int nargs,
    * elements already present in the latter.
    * Flattens possibly present subarrays.
    * The flattened array will be indexed with integer values starting from 0.
+   * Exits with a fatal error if there are big issues, returns false if
+   * everything is not exactly ok but overall there are no errors respecting
+   * the requested operations, true if everything is fine.
    */
   assert(result != NULL);
   make_number(0, result);
@@ -612,7 +627,12 @@ do_deep_flat(int nargs,
     fatal(ext_id, "can't retrieve source array\n");
   if (! get_argument(1, AWK_ARRAY, & dest_arr_value))
     fatal(ext_id, "can't retrieve dest array\n");
-  
+
+  //XXX+TODO: test if works... not found a better way... seems no api facilities...
+  if (list[size].source_arr_value.array_cookie == dest_arr_value.array_cookie)
+    fatal(ext_id, "trying to flat an array on itself!");
+
+
   dest_array = dest_arr_value.array_cookie;                            // *** MANDATORY ***
   list[size].source_array = list[size].source_arr_value.array_cookie;  // *** MANDATORY ***
   size += 1;
@@ -627,6 +647,7 @@ do_deep_flat(int nargs,
     dprint("i, idx, size, maxsize = %zu %zu %zu %zu\n", i, idx, size, maxsize);
     if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
       eprint("in release_flattened_array() at index %ld\n", i); //XXX: fatal?
+      make_number(0, result);
     }
   }
   free(list);
@@ -644,6 +665,9 @@ do_deep_flat_idx(int nargs,
    * elements already present in the latter.
    * Flattens possibly present subarrays.
    * The flattened array will be indexed with integer values starting from 0.
+   * Exits with a fatal error if there are big issues, returns false if
+   * everything is not exactly ok but overall there are no errors respecting
+   * the requested operations, true if everything is fine.
    */
   assert(result != NULL);
   make_number(0.0, result);
@@ -664,6 +688,10 @@ do_deep_flat_idx(int nargs,
   if (! get_argument(1, AWK_ARRAY, & dest_arr_value))
     fatal(ext_id, "can't retrieve dest array\n");
 
+  //XXX+TODO: test if works... not found a better way... seems no api facilities...
+  if (list[size].source_arr_value.array_cookie == dest_arr_value.array_cookie)
+    fatal(ext_id, "trying to flat an array on itself!");
+
   dest_array = dest_arr_value.array_cookie;                            /*** MANDATORY ***/
   list[size].source_array = list[size].source_arr_value.array_cookie;  /*** MANDATORY ***/
   size += 1;
@@ -679,6 +707,7 @@ do_deep_flat_idx(int nargs,
 	   i, idx, size, maxsize);
     if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
       eprint("in release_flattened_array() at index <%ld>\n", i);
+      make_number(0, result);
     }
   }
   free(list);
@@ -694,7 +723,10 @@ do_uniq(int nargs,
    * Populate $nargs[1] with unique elements from $nargs[0] as indexes
    * (and unassigned values). $nargs[2] must be a string about the
    * desired operation, either "i" (for indexes) or "v" (for values).
-   */  
+   * Exits with a fatal error if there are big issues, returns false if
+   * everything is not exactly ok but overall there are no errors respecting
+   * the requested operations, true if everything is fine.
+   */
   assert(result != NULL);
   make_number(0.0, result);
   
@@ -726,13 +758,18 @@ do_uniq(int nargs,
     fatal(ext_id, "can't retrieve source array\n");
   if (! get_argument(1, AWK_ARRAY, & dest_arr_value))
     fatal(ext_id, "can't retrieve dest array\n");
+  
+  //XXX+TODO: test if works... not found a better way... seems no api facilities...
+  if (list[size].source_arr_value.array_cookie == dest_arr_value.array_cookie)
+    fatal(ext_id, "trying to uniq() an array on itself!");
+  
   if (nargs > 2) {
     if (! get_argument(2, AWK_STRING, & what))
       fatal(ext_id,
-	    "can't retrieve dest uniq string choice (idx|val)\n");
+	    "can't retrieve dest uniq() string choice (idx|val)\n");
     if (what.str_value.len != 1)
       fatal(ext_id,
-	    "Invalid uniq string choice (idx|val): <%s>\n",
+	    "Invalid uniq() string choice (idx|val): <%s>\n",
 	    what.str_value.str);
     switch (what.str_value.str[0]) {
     case 'i':
@@ -741,7 +778,7 @@ do_uniq(int nargs,
       uniq_on_vals = 1; break;
     default:
       fatal(ext_id,
-	    "Invalid uniq string choice (idx|val): <%s>\n",
+	    "Invalid uniq() string choice (idx|val): <%s>\n",
 	    what.str_value.str);
     }
   } else {
@@ -797,14 +834,17 @@ do_uniq(int nargs,
     dprint("i, idx, size, maxsize = <%zu> <%zu> <%zu> <%zu>\n",
 	   i, idx, size, maxsize);
     if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
+      make_number(0, result);
       eprint("release_flattened_array() at index %ld\n", i);
     }
   }
   /* XXX: destroy_array() not exposed in gawk API 3.0 */
 #ifdef destroy_array
   if (flat_array != NULL)
-    if (! destroy_array(flat_array))
+    if (! destroy_array(flat_array)) {
+      make_number(0, result);
       eprint("Can't destroy_array <%s>", arrname);
+    }
 #endif
   free(list);
   return result;
