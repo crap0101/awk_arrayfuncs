@@ -284,7 +284,7 @@ _deep_flat(struct subarrays *list,
 	  *size += 1;
 	} else {
 	  fatal(ext_id,
-		"Unknown element at index <%zu> (val_type=%d)\n",
+		"Unknown element at index <%zu> (val_type=%d)",
 		i, list[*idx].dest_value_val.val_type);
 	}
       } else {
@@ -295,7 +295,7 @@ _deep_flat(struct subarrays *list,
 				& list[*idx].dest_value_val)) {
 	  fatal(ext_id,
 		"set_array_element() failed on scalar value"
-		"at list[%zu] (dest_idx = <%zu>)\n",
+		"at list[%zu] (dest_idx = <%zu>)",
 		*idx, dest_idx);
 	}
 	dest_idx += 1;
@@ -354,7 +354,7 @@ _deep_flat_idx(struct subarrays *list,
 	  list[*size].source_array = list[*idx].source_flat_array->elements[i].value.array_cookie;
 	  *size += 1;
 	} else {
-	  fatal(ext_id, "Unknown element at index <%zu> (val_type=%d)\n",
+	  fatal(ext_id, "Unknown element at index <%zu> (val_type=%d)",
 		i, list[*idx].dest_value_val.val_type);
 	}
       }
@@ -362,14 +362,14 @@ _deep_flat_idx(struct subarrays *list,
       if (! copy_element(list[*idx].source_flat_array->elements[i].index,
 			 & list[*idx].dest_index_val)) {
 	fatal(ext_id,
-	      "copy_element() at array index %zu (arraylist index %zu)\n",
+	      "copy_element() at array index %zu (arraylist index %zu)",
 	      i, *idx);
       }
       if (! set_array_element(*dest_array,
 			      & dest_idx_val,
 			      & list[*idx].dest_index_val)) {
 	fatal(ext_id,
-	      "set_array_element() failed at list[%zu] (dest_idx = %zu)\n",
+	      "set_array_element() failed at list[%zu] (dest_idx = %zu)",
 	      *idx, dest_idx);
       }
       dest_idx += 1;
@@ -398,7 +398,7 @@ do_equals(int nargs,
   assert(result != NULL);
   make_number(0.0, result);
   if (nargs != 2)
-    fatal(ext_id, "two args expected: array_1, array_2\n");
+    fatal(ext_id, "two args expected: array_1, array_2");
 
   struct subarrays *list = NULL;
   size_t i, idx = 0;
@@ -406,15 +406,15 @@ do_equals(int nargs,
   size_t maxsize = 10;
   
   if (NULL == (list = alloc_subarray_list(list, maxsize)))
-    fatal(ext_id, "Can't allocate array lists!\n");
+    fatal(ext_id, "Can't allocate array lists!");
 
   /* SOURCE ARRAY */
   if (! get_argument(0, AWK_ARRAY, & list[size].source_arr_value))
-    fatal(ext_id, "can't retrieve array (1st arg)\n");
+    fatal(ext_id, "can't retrieve array (1st arg)");
 
   /* DEST ARRAY */
   if (! get_argument(1, AWK_ARRAY, & list[size].dest_arr_value))
-    fatal(ext_id, "can't retrieve array (2nd arg)\n");
+    fatal(ext_id, "can't retrieve array (2nd arg)");
 
   list[size].dest_array = list[size].dest_arr_value.array_cookie;     /*** MANDATORY ***/
   list[size].source_array = list[size].source_arr_value.array_cookie; /*** MANDATORY ***/
@@ -507,17 +507,17 @@ do_copy(int nargs,
   awk_valtype_t ret;
   
   if (nargs < 2)
-    fatal(ext_id, "two args expected: source, dest\n");
+    fatal(ext_id, "two args expected: source, dest");
   if (NULL == (list = alloc_subarray_list(list, maxsize)))
-    fatal(ext_id, "Can't allocate arrays list!\n");
+    fatal(ext_id, "Can't allocate arrays list!");
 
   /* SOURCE ARRAY */
   if (! get_argument(0, AWK_ARRAY, & list[size].source_arr_value))
-    fatal(ext_id, "can't retrieve source array\n");
+    fatal(ext_id, "can't retrieve source array");
 
   /* DEST ARRAY */
   if (! get_argument(1, AWK_ARRAY, & list[size].dest_arr_value))
-    fatal(ext_id, "can't retrieve dest array\n");
+    fatal(ext_id, "can't retrieve dest array");
     
   //XXX+TODO: test if works... not found a better way... seems no api facilities...
   if (list[size].source_arr_value.array_cookie == list[size].dest_arr_value.array_cookie)
@@ -552,7 +552,7 @@ do_copy(int nargs,
 			 & list[idx].dest_index_val)) {
 	fatal(ext_id,
 	      "copy_element() failed at array index <%zu> "
-	      "(arraylist index: %zu)\n",
+	      "(arraylist index: %zu)",
 	      i, idx);
       }
       if (! (ret = copy_element(list[idx].source_flat_array->elements[i].value,
@@ -568,7 +568,7 @@ do_copy(int nargs,
 				  & list[idx].dest_index_val,
 				  & list[size].dest_arr_value)) {
 	    fatal(ext_id,
-		  "set_array_element() failed on subarray at index <%zu>\n",
+		  "set_array_element() failed on subarray at index <%zu>",
 		  idx);
 	    //size -=1;
 	    //goto out;
@@ -578,7 +578,7 @@ do_copy(int nargs,
 	  size += 1;
 	} else {
 	  fatal(ext_id,
-		"Unknown element at index <%zu> (val_type=%d)\n",
+		"Unknown element at index <%zu> (val_type=%d)",
 		i, list[idx].dest_value_val.val_type);
 	}
       } else {
@@ -586,7 +586,7 @@ do_copy(int nargs,
 				& list[idx].dest_index_val,
 				& list[idx].dest_value_val)) {
 	  fatal(ext_id,
-		"set_array_element() failed on value at index <%zu>\n", idx);
+		"set_array_element() failed on value at index <%zu>", idx);
 	}
       }
     }
@@ -630,13 +630,13 @@ do_deep_flat(int nargs,
   size_t maxsize = 10;
 
   if (nargs < 2)
-    fatal(ext_id, "two args expected: source_array, dest_array\n");
+    fatal(ext_id, "two args expected: source_array, dest_array");
   if (NULL == (list = alloc_subarray_list(list, maxsize)))
     fatal(ext_id, "Can't allocate array lists: %s", strerror(errno));
   if (! get_argument(0, AWK_ARRAY, & list[size].source_arr_value))
-    fatal(ext_id, "can't retrieve source array\n");
+    fatal(ext_id, "can't retrieve source array");
   if (! get_argument(1, AWK_ARRAY, & dest_arr_value))
-    fatal(ext_id, "can't retrieve dest array\n");
+    fatal(ext_id, "can't retrieve dest array");
 
   //XXX+TODO: test if works... not found a better way... seems no api facilities...
   if (list[size].source_arr_value.array_cookie == dest_arr_value.array_cookie)
@@ -685,13 +685,13 @@ do_deep_flat_idx(int nargs,
   size_t maxsize = 10;
 
   if (nargs < 2)
-    fatal(ext_id, "two args expected: source_array, dest_array\n");
+    fatal(ext_id, "two args expected: source_array, dest_array");
   if (NULL == (list = alloc_subarray_list(list, maxsize)))
     fatal(ext_id, "Can't allocate array lists: %s", strerror(errno));
   if (! get_argument(0, AWK_ARRAY, & list[size].source_arr_value))
-    fatal(ext_id, "can't retrieve source array\n");
+    fatal(ext_id, "can't retrieve source array");
   if (! get_argument(1, AWK_ARRAY, & dest_arr_value))
-    fatal(ext_id, "can't retrieve dest array\n");
+    fatal(ext_id, "can't retrieve dest array");
 
   //XXX+TODO: test if works... not found a better way... seems no api facilities...
   if (list[size].source_arr_value.array_cookie == dest_arr_value.array_cookie)
@@ -725,6 +725,7 @@ do_uniq(int nargs,
    * Exits with a fatal error if there are big issues, returns false if
    * everything is not exactly ok but overall there are no errors respecting
    * the requested operations, true if everything is fine.
+   * NOTE: is also fatal to pass a $nargs[0] empty or deleted array.
    */
   assert(result != NULL);
   make_number(1.0, result);
@@ -747,16 +748,16 @@ do_uniq(int nargs,
   size_t maxsize = 10;
   
   if (nargs < 2)
-    fatal(ext_id, "at least two args expected: source_array, dest_array\n");
+    fatal(ext_id, "at least two args expected: source_array, dest_array");
   if (nargs > 3)
-    fatal(ext_id, "too many arguments\n");
+    fatal(ext_id, "too many arguments");
   if (NULL == (list = alloc_subarray_list(list, maxsize)))
     fatal(ext_id, "Can't allocate array lists: %s", strerror(errno));
   
   if (! get_argument(0, AWK_ARRAY, & list[size].source_arr_value))
-    fatal(ext_id, "can't retrieve source array\n");
+    fatal(ext_id, "can't retrieve source array");
   if (! get_argument(1, AWK_ARRAY, & dest_arr_value))
-    fatal(ext_id, "can't retrieve dest array\n");
+    fatal(ext_id, "can't retrieve dest array");
   
   //XXX+TODO: test if works... not found a better way... seems no api facilities...
   if (list[size].source_arr_value.array_cookie == dest_arr_value.array_cookie)
@@ -765,10 +766,10 @@ do_uniq(int nargs,
   if (nargs > 2) {
     if (! get_argument(2, AWK_STRING, & what))
       fatal(ext_id,
-	    "can't retrieve dest uniq() string choice (idx|val)\n");
+	    "can't retrieve dest uniq() string choice (idx|val)");
     if (what.str_value.len != 1)
       fatal(ext_id,
-	    "Invalid uniq() string choice (idx|val): <%s>\n",
+	    "Invalid uniq() string choice (idx|val): <%s>",
 	    what.str_value.str);
     switch (what.str_value.str[0]) {
     case 'i':
@@ -777,7 +778,7 @@ do_uniq(int nargs,
       uniq_on_vals = 1; break;
     default:
       fatal(ext_id,
-	    "Invalid uniq() string choice (idx|val): <%s>\n",
+	    "Invalid uniq() string choice (idx|val): <%s>",
 	    what.str_value.str);
     }
   } else {
@@ -807,20 +808,20 @@ do_uniq(int nargs,
   // flat the flatten array, bleah!
   // in this case, fatal... on the contrary to the cases of NOTE_A
   if (! flatten_array_typed(flat_array, & flat, AWK_STRING, AWK_UNDEFINED))
-    fatal(ext_id, "could not flatten source flat_array\n");
+    fatal(ext_id, "could not flatten source flat_array... maybe empty?");
 
   // fill the destination array with uniq indexes (and null values)
   for (i = 0; i < flat->count; i++)  {
     if (! (ret = copy_element(flat->elements[i].value, & arr_index))) {
       fatal(ext_id,
-	    "Unknown element at index <%zu> (%d)\n",
+	    "Unknown element at index <%zu> (%d)",
 	    i, flat->elements[i].value.val_type);
     } else {
       make_null_string(& arr_value);
       if (! set_array_element(dest_array, & arr_index, & arr_value)) {
 	fatal(ext_id,
 	      "set_array_element() failed "
-	      "on scalar value at index <%zu> (%s)\n",
+	      "on scalar value at index <%zu> (%s)",
 	      i, _val_types[arr_index.val_type]);
       }
     }

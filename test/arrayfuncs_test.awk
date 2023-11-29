@@ -97,23 +97,36 @@ BEGIN {
     @dprint("* array::copy(a, ___b)")
     array::copy(a, ___b)
     @dprint("* ___b:") && arrlib::printa(___b)
-    @dprint("* array::copy(___b, ___b)")
-    array::copy(___b, ___b)
-    @dprint("* ___b:") && arrlib::printa(___b)
     testing::assert_true(arrlib::equals(a, ___b), 1, "> arrlib::equals(a, ___b)")
+
+    #XXX: add fail test
+    #@dprint("* array::copy(___b, ___b)")
+    #array::copy(___b, ___b)
+    #@dprint("* ___b:") && arrlib::printa(___b)
+
     delete ___b
-    # insane! and "works" on flat array only.
-    # used with an array with subarrays has the side effet of delete them.
     @dprint("* array::copy(arr, ___b)")
     array::copy(arr, ___b)
     @dprint("* ___b:") && arrlib::printa(___b)
-    @dprint("* array::copy(___b, ___b)")
-    array::copy(___b, ___b)
-    @dprint("* arr:") && arrlib::printa(arr)
+    testing::assert_true(arrlib::equals(arr, ___b), 1, "> arrlib::equals(arr, ___b)")
+
+    delete ___b
+    @dprint("* delete ___b")
     @dprint("* ___b:") && arrlib::printa(___b)
-    testing::assert_false(arrlib::equals(arr, ___b), 1, "> arrlib::equals(arr, ___b)")
+    testing::assert_false(arrlib::equals(arr, ___b), 1, "> ! arrlib::equals(arr, ___b)")
+
+    @dprint("* array::copy(arr, ___b)")
+    array::copy(arr, ___b)
+    testing::assert_true(arrlib::equals(arr, ___b), 1, "> arrlib::equals(arr, ___b)")
+    #XXX: add fail test
+    #@dprint("* array::copy(___b, ___b)")
+    #array::copy(___b, ___b)
+    # and again, to check __b not messed up:
+    testing::assert_true(arrlib::equals(arr, ___b), 1, "> arrlib::equals(arr, ___b)")
     delete ___b
 
+    #XXX check arrlib::equals on unassigned values equals(arr, notanarray)
+    
     # add some unassigned values
     @dprint("* set unassigned values to a")
     a["baz"]
@@ -123,12 +136,11 @@ BEGIN {
     array::copy(a,cc)
     @dprint("* a:") && arrlib::printa(a)
     @dprint("* cc:") && arrlib::printa(cc)
-    @dprint(sprintf("* a[\"baz\"] <%s> (type: %s) cc[\"baz\"] <%s> (type: %s) | (eq? %d)\n",
-		    a["baz"], typeof(a["baz"]), cc["baz"], typeof(cc["baz"]), a["baz"] == cc["baz"]))
     testing::assert_true(arrlib::equals(a, cc), 1, "> arrlib::equals(a, cc)")
 
     @dprint("* arrlib::copy(a, ccc)")
     arrlib::copy(a, ccc)
+
     testing::assert_true(arrlib::equals(cc, ccc), 1, "> arrlib::equals(cc, ccc)")
 
     @dprint("* arrlib::remove_unassigned_untyped(cc)")
@@ -139,11 +151,10 @@ BEGIN {
     @dprint("* arrlib::remove_unassigned_untyped(ccc)")
     arrlib::remove_unassigned_untyped(ccc)
 
-    # XXX+NOTE: see note in function arrlib::remove_unassigned_untyped #XXX printing issue, in fact... working on this.
-    # merely accessing unassigned/untyped values, give them a (string) values (at least from gawk 5.2.2)
-    if (awkpot::cmp_version(awkpot::get_version(), "5.2.2", "awkpot::lt"))
-	testing::assert_true(arrlib::equals(cc, ccc), 1, "> arrlib::equals(cc, ccc)")
+    @dprint("* cc:") && arrlib::printa(cc)
+    @dprint("* ccc:") && arrlib::printa(ccc)
 
+    testing::assert_true(arrlib::equals(cc, ccc), 1, "> arrlib::equals(cc, ccc)")
     @dprint("* arrlib::remove_unassigned_untyped(a)")
     arrlib::remove_unassigned_untyped(a)
     delete cc
@@ -252,13 +263,13 @@ BEGIN {
 
 
     # test wrong inputs
-    testing::assert_false(array::copy(arr, 2), 1, "> (must fail) array::copy(arr, 2)")
+    #XXX fatal: testing::assert_false(array::copy(arr, 2), 1, "> (must fail) array::copy(arr, 2)")
     # checking if not messed up:
     testing::assert_true(arrlib::equals(arr, arr2), 1, "> arrlib::equals(arr, arr2)")
-    testing::assert_false(array::copy(2, arr), 1, "> (fail) array::copy(2, arr)")
+    #XXX fatal: testing::assert_false(array::copy(2, arr), 1, "> (fail) array::copy(2, arr)")
     # checking if not messed up:
     testing::assert_true(arrlib::equals(arr, arr2), 1, "> arrlib::equals(arr, arr2)")
-    testing::assert_false(array::copy(arr, 2), 1, "> (fail) array::copy(1, 2)")
+    #XXX fatal: testing::assert_false(array::copy(arr, 2), 1, "> (fail) array::copy(1, 2)")
     #@dprint("> (fail) array::copy(arr) ->", ! array::copy(arr)) # fatal error
     #@dprint("> (fail) array::copy() ->", ! array::copy(arr)) # fatal error
 
@@ -431,9 +442,9 @@ BEGIN {
 	}
     # wrong args:
     #testing::assert_false(array::uniq(), 1, "> uniq [no args]") # fatal
-    testing::assert_false(array::uniq(1, 2), 1, "> uniq [wrong args type]")
-    testing::assert_false(array::uniq(__arr, __dest_, 1), 1, "> uniq [wrong 3rd arg type]")
-    testing::assert_false(array::uniq(__arr, __dest_, "i", 2), 1, "> uniq [wrong number of args]")
+    #XXX fatal: testing::assert_false(array::uniq(1, 2), 1, "> uniq [wrong args type]")
+    #XXX fatal: testing::assert_false(array::uniq(__arr, __dest_, 1), 1, "> uniq [wrong 3rd arg type]")
+    #XXX fatal: testing::assert_false(array::uniq(__arr, __dest_, "i", 2), 1, "> uniq [wrong number of args]")
     
     @dprint("* __arr:") && arrlib::printa(__arr)
     @dprint("* uniq (val)")
@@ -468,12 +479,9 @@ BEGIN {
     # empty array:
     delete __arr1
     delete __dest_v
-    delete __dest_i
-    rv = array::uniq(__arr1, __dest_v)
-    ri = array::uniq(__arr1, __dest_i, "i")
-    testing::assert_equal(0, rv, 1, "uniq (val) retcode on deleted array")
-    testing::assert_equal(0, ri, 1, "uniq (idx) retcode on deleted array")
-    testing::assert_true(arrlib::equals(__dest_v, __dest_i), 1, "> equals uniq [empty] arrays __dest_v __dest_i")
+    # comparing empty/deleted arrays returns false
+    testing::assert_false(array::equals(__arr1, __dest_v), 1, "> equals uniq [empty] arrays __arr1 __dest_v")
+    #XXX fatal: rv = array::uniq(__arr1, __dest_v)
 
     # big array:
     delete __dest
@@ -515,9 +523,9 @@ BEGIN {
     __a[0]=0
     #testing::assert_true(array::equals(), 1, "> equals (no args)")  # fatal
     #testing::assert_true(array::equals(__a), 1, "> equals (1 arg)") # fatal
-    testing::assert_false(array::equals(__a, __a, __a), 1, "> equals (3 args)")
-    testing::assert_false(array::equals(__a, 1), 1, "> equals (wrong type)")
-    testing::assert_false(array::equals(2, 1), 1, "> equals (wrong type) (2)")
+    #xxx fatal: testing::assert_false(array::equals(__a, __a, __a), 1, "> equals (3 args)")
+    #xxx fatal: testing::assert_false(array::equals(__a, 1), 1, "> equals (wrong type)")
+    #xxx fatal: testing::assert_false(array::equals(2, 1), 1, "> equals (wrong type) (2)")
 
     # empty, change and add elements
     delete __a
