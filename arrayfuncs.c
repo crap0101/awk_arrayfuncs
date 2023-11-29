@@ -96,7 +96,6 @@ dl_load(const gawk_api_t *api_p, void *id)
 /* UTILITY FUNCTIONS */
 /*********************/
 
-//XXX+TODO: write a release_subarrays_something function
 
 int
 compare_element(awk_value_t item1, awk_value_t item2)
@@ -202,6 +201,34 @@ alloc_subarray_list(struct subarrays *list, size_t new_size)
    */
     dprint("(re)alloc new_size: <%zu>\n", new_size);
     return realloc(list, sizeof(struct subarrays) * new_size);
+}
+
+
+int
+release_subarrays(struct subarrays *list,
+			  size_t idx,
+			  int rs, int rd) {
+  /* TODO XXX DOC */
+  size_t i;
+  int result = 1;
+  dprint("Release flattened array...\n");
+  for (i=0; i < idx; i++) {
+    if (rs) { // release source arrays
+      if (! release_flattened_array(list[i].source_array,
+				    list[i].source_flat_array)) {
+	result = 0;
+	dprint("in release_flattened_array() at index %ld [source array]\n", i);
+      }
+    }
+    if (rd) { // release dest arrays
+      if (! release_flattened_array(list[i].dest_array,
+				    list[i].dest_flat_array)) {
+	result = 0;
+	dprint("in release_flattened_array() at index %ld [dest array]\n", i);
+      }
+    }
+  }
+  return result;
 }
 
 
@@ -404,13 +431,13 @@ do_equals(int nargs,
     if (! flatten_array_typed(list[idx].source_array,
 			      & list[idx].source_flat_array,
 			      AWK_STRING, AWK_UNDEFINED)) {
-      eprint("could not flatten (1st) array\n");
+      dprint("could not flatten (1st) array\n");
       goto out;
     }
     if (! flatten_array_typed(list[idx].dest_array,
 			      & list[idx].dest_flat_array,
 			      AWK_STRING, AWK_UNDEFINED)) {
-      eprint("could not flatten (2nd) array\n");
+      dprint("could not flatten (2nd) array\n");
       goto out;
     }
 
@@ -452,17 +479,7 @@ do_equals(int nargs,
   make_number(1.0, result);
  out:
   /* MANDATORY -- must be called before exit */
-  dprint("Release flattened array...\n");
-  for (i=0; i < idx; i++) {
-    dprint("i, idx, size, maxsize = <%zu> <%zu> <%zu> <%zu>\n",
-	   i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
-      eprint("in release_flattened_array() at index %ld [1st array]\n", i); //XXX: fatal?
-    }
-    if (! release_flattened_array(list[i].dest_array, list[i].dest_flat_array)) {
-      eprint("in release_flattened_array() at index %ld [2nd array]\n", i); //XXX: fatal?
-    }
-  }
+  release_subarrays(list, idx, 1, 1);
   free(list);
   return result;
 }
@@ -579,16 +596,9 @@ do_copy(int nargs,
   make_number(1.0, result);
 
   /* MANDATORY -- must be called before exit */
-  dprint("Release flattened array...\n");
-  for (i=0; i < idx; i++) {
-    dprint("i, idx, size, maxsize = <%zu> <%zu> <%zu> <%zu>\n",
-	   i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array,
-				  list[i].source_flat_array)) {
-      eprint("release_flattened_array() failed at index <%ld>\n", i);
-      make_number(0.0, result);
-    }
-  }
+  if (! release_subarrays(list, idx, 1, 0))
+    make_number(0.0, result);
+
   free(list);
   return result;
 }
@@ -615,7 +625,7 @@ do_deep_flat(int nargs,
   awk_value_t dest_arr_value;
   awk_array_t dest_array;
   
-  size_t i, idx = 0;
+  size_t idx = 0;
   size_t size = 0;
   size_t maxsize = 10;
 
@@ -642,14 +652,9 @@ do_deep_flat(int nargs,
   make_number(1, result);
 
   // must be called before exit
-  dprint("Release flattened array...\n");
-  for (i=0; i < idx; i++) {
-    dprint("i, idx, size, maxsize = %zu %zu %zu %zu\n", i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
-      eprint("in release_flattened_array() at index %ld\n", i); //XXX: fatal?
-      make_number(0, result);
-    }
-  }
+  if (! release_subarrays(list, idx, 1, 0))
+    make_number(0.0, result);
+
   free(list);
   return result;
 }
@@ -675,7 +680,7 @@ do_deep_flat_idx(int nargs,
   struct subarrays *list = NULL;
   awk_value_t dest_arr_value;
   awk_array_t dest_array;  
-  size_t i, idx = 0;
+  size_t idx = 0;
   size_t size = 0;
   size_t maxsize = 10;
 
@@ -701,15 +706,9 @@ do_deep_flat_idx(int nargs,
   make_number(1, result);
 
   /* must be called before exit */
-  dprint("Release flattened array...\n");
-  for (i=0; i < idx; i++) {
-    dprint("i, idx, size, maxsize = <%zu> <%zu> <%zu> <%zu>\n",
-	   i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
-      eprint("in release_flattened_array() at index <%ld>\n", i);
-      make_number(0, result);
-    }
-  }
+  if (! release_subarrays(list, idx, 1, 0))
+    make_number(0.0, result);
+
   free(list);
   return result;
 }
@@ -728,7 +727,7 @@ do_uniq(int nargs,
    * the requested operations, true if everything is fine.
    */
   assert(result != NULL);
-  make_number(0.0, result);
+  make_number(1.0, result);
   
   struct subarrays *list = NULL;
   awk_value_t what;
@@ -827,17 +826,10 @@ do_uniq(int nargs,
     }
   }
 
-  make_number(1, result);
   // must be called before exit
-  dprint("Release flattened array...\n");
-  for (i=0; i < idx; i++) {
-    dprint("i, idx, size, maxsize = <%zu> <%zu> <%zu> <%zu>\n",
-	   i, idx, size, maxsize);
-    if (! release_flattened_array(list[i].source_array, list[i].source_flat_array)) {
-      make_number(0, result);
-      eprint("release_flattened_array() at index %ld\n", i);
-    }
-  }
+  if (! release_subarrays(list, idx, 1, 0))
+    make_number(0.0, result);
+
   /* XXX: destroy_array() not exposed in gawk API 3.0 */
 #ifdef destroy_array
   if (flat_array != NULL)
