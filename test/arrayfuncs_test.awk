@@ -133,8 +133,6 @@ BEGIN {
     delete ___c
     delete ___b
 
-    #XXX check arrlib::equals on unassigned values equals(arr, notanarray)
-    
     # add some unassigned values
     @dprint("* set unassigned values to a")
     a["baz"]
