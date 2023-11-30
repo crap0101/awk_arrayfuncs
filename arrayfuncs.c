@@ -208,7 +208,12 @@ int
 release_subarrays(struct subarrays *list,
 			  size_t idx,
 			  int rs, int rd) {
-  /* TODO XXX DOC */
+  /*
+   * Releases the struct subarrays $list up to $idx index,
+   * calling release_flattened_array() on the source_* arrays member
+   * if $rs is true and on the dest_* arrays member ig $rd is true.
+   * Returns true if success, false otherwise.
+   */
   size_t i;
   int result = 1;
   dprint("Release flattened array...\n");
@@ -506,7 +511,7 @@ do_copy(int nargs,
   size_t maxsize = 10;
   awk_valtype_t ret;
   
-  if (nargs < 2)
+  if (nargs != 2)
     fatal(ext_id, "two args expected: source, dest");
   if (NULL == (list = alloc_subarray_list(list, maxsize)))
     fatal(ext_id, "Can't allocate arrays list!");
