@@ -33,12 +33,15 @@ along with this program; if not, see <https://www.gnu.org/licenses>.
 // define these before include awk_extensions.h
 #define _DEBUGLEVEL 0
 #define __module__ "arrayfuncs"
+#define __namespace__ "array"
+#define _array_prefix "arrayfuncs_array__"
+static const gawk_api_t *api;
+static awk_ext_id_t ext_id;
+static const char *ext_version = "0.2";
 
+// ... and now include other own utilities
 #include "awk_extensions.h"
 // https://github.com/crap0101/laundry_basket/blob/master/awk_extensions.h
-
-// others define
-#define _array_prefix "arrayfuncs_array__"
 
 struct subarrays {
   awk_value_t source_index_val;
@@ -66,10 +69,6 @@ static awk_value_t * do_uniq(int nargs, awk_value_t *result, struct awk_ext_func
 
 /* ----- boilerplate code ----- */
 int plugin_is_GPL_compatible;
-static const gawk_api_t *api;
-
-static awk_ext_id_t ext_id;
-static const char *ext_version = "0.1";
 
 static awk_ext_func_t func_table[] = {
   { "equals", do_equals, 2, 2, awk_false, NULL },
@@ -99,7 +98,7 @@ dl_load(const gawk_api_t *api_p, void *id)
   }
   
   for (i=0; i < sizeof(func_table) / sizeof(awk_ext_func_t); i++) {
-    if (! add_ext_func("array", & func_table[i])) {
+    if (! add_ext_func(__namespace__, & func_table[i])) {
       eprint("can't add extension function <%s>\n", func_table[i].name);
       errors++;
     }
@@ -110,7 +109,7 @@ dl_load(const gawk_api_t *api_p, void *id)
   return (errors == 0);
 }
 
-/* ---------------------------- */
+/* ----- end of boilerplate code ----------------------- */
 
 
 /*********************/
@@ -161,55 +160,6 @@ compare_element(awk_value_t item1, awk_value_t item2)
     return 0;
   }
   return 0; // just for silencing warning
-}
-
-int
-copy_element(awk_value_t arr_item, awk_value_t * dest )
-{
-  /*
-   * Copies $arr_item on $*dest using the make_* gawk's api functions.
-   * Returns 1 if succedes, 0 otherwise.
-   * Works with AWK_(STRING|REGEX|STRNUM|NUMBER|UNDEFINED) and,
-   * if available, AWK_BOOL.
-   * For others val_type (such AWK_ARRAY, which are much more complex
-   * to handle), always returns 0. Such cases must be checked before or
-   * after calling this function.
-   */
-  switch (arr_item.val_type) {
-  case AWK_STRING:
-    make_const_string(arr_item.str_value.str, arr_item.str_value.len, dest);
-    return 1;
-  case AWK_REGEX:
-    make_const_regex(arr_item.str_value.str, arr_item.str_value.len, dest);
-    return 1;
-  case AWK_STRNUM:
-    make_const_user_input(arr_item.str_value.str, arr_item.str_value.len, dest);
-    return 1;
-  case AWK_NUMBER:
-    make_number(arr_item.num_value, dest);
-    return 1;
-/* not in gawkapi.h (3.0) */
-#ifdef AWK_BOOL
-  case AWK_BOOL:
-    make_bool(arr_item.bool_value, dest);
-    return 1;
-#endif
-  case AWK_UNDEFINED:
-    dprint("Undefined: type <%d>\n", AWK_UNDEFINED);
-    make_null_string(dest);
-    return 1;
-  case AWK_ARRAY:        // we don't copy arrays here! o.O
-    return 0;
-  case AWK_SCALAR:       // should not happen
-    eprint("Unsupported type: %d (scalar)\n", arr_item.val_type);
-    return 0;
-  case AWK_VALUE_COOKIE: // should not happen
-    eprint("Unsupported type: %d (value_cookie)\n", arr_item.val_type);
-    return 0;
-  default:               // could happen
-    eprint("Unknown val_type: <%d>\n", arr_item.val_type);
-    return 0;
-  }
 }
 
 
